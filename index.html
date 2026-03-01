@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>osojicode — The garbage collector for your project</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --white: #fafafa;
+    --off-white: #f5f4f0;
+    --pale: #edecea;
+    --warm-gray: #b8b4ad;
+    --mid-gray: #8a8580;
+    --text: #2c2a26;
+    --text-light: #5c5850;
+    --accent: #c4402f;
+    --accent-soft: #d4715e;
+    --serif: 'Cormorant Garamond', Georgia, serif;
+    --sans: 'DM Sans', -apple-system, sans-serif;
+    --mono: 'DM Mono', 'SF Mono', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { 
+    font-size: 16px; 
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background: var(--white);
+    color: var(--text);
+    font-family: var(--sans);
+    font-weight: 300;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ---- NAV ---- */
+  nav {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 100;
+    padding: 2rem 4rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(250, 250, 250, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.4s ease;
+  }
+
+  nav.scrolled { border-bottom-color: var(--pale); }
+
+  .nav-mark {
+    font-family: var(--serif);
+    font-size: 1.5rem;
+    font-weight: 300;
+    letter-spacing: 0.04em;
+    color: var(--text);
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 2.5rem;
+    align-items: center;
+  }
+
+  .nav-links a {
+    font-family: var(--sans);
+    font-size: 0.8rem;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--mid-gray);
+    text-decoration: none;
+    transition: color 0.3s ease;
+  }
+
+  .nav-links a:hover { color: var(--text); }
+
+  .nav-cta {
+    font-family: var(--mono) !important;
+    font-size: 0.75rem !important;
+    background: var(--text);
+    color: var(--white) !important;
+    padding: 0.6rem 1.4rem;
+    border-radius: 2px;
+    transition: background 0.3s ease !important;
+  }
+
+  .nav-cta:hover { background: var(--accent) !important; }
+
+  /* ---- HERO ---- */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 8rem 4rem 6rem;
+    max-width: 900px;
+  }
+
+  .hero-label {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    font-weight: 300;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--warm-gray);
+    margin-bottom: 2.5rem;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 0.2s forwards;
+  }
+
+  .hero h1 {
+    font-family: var(--serif);
+    font-size: clamp(2.8rem, 5.5vw, 4.2rem);
+    font-weight: 300;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    margin-bottom: 2.5rem;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 0.4s forwards;
+  }
+
+  .hero p {
+    font-size: 1.15rem;
+    line-height: 1.8;
+    color: var(--text-light);
+    max-width: 600px;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 0.6s forwards;
+  }
+
+  .hero-cta-row {
+    margin-top: 3rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 0.8s forwards;
+  }
+
+  .btn-primary {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    background: var(--text);
+    color: var(--white);
+    padding: 0.9rem 2rem;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.3s ease;
+  }
+
+  .btn-primary:hover { background: var(--accent); }
+
+  .btn-ghost {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    color: var(--mid-gray);
+    text-decoration: none;
+    padding: 0.9rem 0;
+    border-bottom: 1px solid var(--pale);
+    transition: color 0.3s ease, border-color 0.3s ease;
+  }
+
+  .btn-ghost:hover { color: var(--text); border-color: var(--text); }
+
+  /* ---- DIVIDER ---- */
+  .divider {
+    width: 100%;
+    padding: 0 4rem;
+  }
+
+  .divider-line {
+    height: 1px;
+    background: var(--pale);
+    width: 100%;
+  }
+
+  /* ---- PROBLEM ---- */
+  .problem {
+    padding: 8rem 4rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    font-weight: 300;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--warm-gray);
+    margin-bottom: 3rem;
+  }
+
+  .problem-statement {
+    font-family: var(--serif);
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-weight: 300;
+    line-height: 1.5;
+    color: var(--text);
+    max-width: 750px;
+    margin-bottom: 4rem;
+  }
+
+  .problem-statement em {
+    font-style: italic;
+    color: var(--accent-soft);
+  }
+
+  .debris-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--pale);
+    border: 1px solid var(--pale);
+  }
+
+  .debris-item {
+    background: var(--white);
+    padding: 2.5rem;
+  }
+
+  .debris-item h3 {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text);
+    margin-bottom: 1rem;
+  }
+
+  .debris-item p {
+    font-size: 0.9rem;
+    color: var(--text-light);
+    line-height: 1.7;
+  }
+
+  /* ---- HOW ---- */
+  .how {
+    padding: 8rem 4rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .how-headline {
+    font-family: var(--serif);
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-weight: 300;
+    line-height: 1.4;
+    margin-bottom: 4rem;
+    max-width: 600px;
+  }
+
+  .how-steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4rem;
+  }
+
+  .step-number {
+    font-family: var(--serif);
+    font-size: 3rem;
+    font-weight: 300;
+    color: var(--pale);
+    margin-bottom: 1.5rem;
+    line-height: 1;
+  }
+
+  .step h3 {
+    font-family: var(--sans);
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 0.8rem;
+  }
+
+  .step p {
+    font-size: 0.9rem;
+    color: var(--text-light);
+    line-height: 1.7;
+  }
+
+  .approach-note {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 4rem;
+    padding: 2.5rem 0;
+    max-width: 680px;
+  }
+
+  .approach-marker {
+    width: 2px;
+    min-height: 100%;
+    background: var(--pale);
+    flex-shrink: 0;
+  }
+
+  .approach-content h3 {
+    font-family: var(--sans);
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin-bottom: 0.8rem;
+    color: var(--text);
+  }
+
+  .approach-content p {
+    font-size: 0.9rem;
+    color: var(--text-light);
+    line-height: 1.8;
+  }
+
+  /* ---- SCORECARD ---- */
+  .scorecard-section {
+    padding: 6rem 4rem 8rem;
+    background: var(--off-white);
+  }
+
+  .scorecard-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .scorecard-intro {
+    max-width: 600px;
+    margin-bottom: 4rem;
+  }
+
+  .scorecard-intro h2 {
+    font-family: var(--serif);
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-weight: 300;
+    line-height: 1.4;
+    margin-bottom: 1.5rem;
+  }
+
+  .scorecard-intro p {
+    font-size: 0.95rem;
+    color: var(--text-light);
+    line-height: 1.8;
+  }
+
+  .scorecard {
+    background: var(--white);
+    border: 1px solid var(--pale);
+    padding: 3rem;
+    font-family: var(--mono);
+    max-width: 640px;
+  }
+
+  .scorecard-header {
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--warm-gray);
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--pale);
+    margin-bottom: 1.5rem;
+  }
+
+  .scorecard-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0.7rem 0;
+    font-size: 0.85rem;
+  }
+
+  .scorecard-row .label {
+    color: var(--text-light);
+    font-weight: 300;
+  }
+
+  .scorecard-row .value {
+    color: var(--text);
+    font-weight: 400;
+  }
+
+  .scorecard-row .value.warn { color: var(--accent); }
+
+  .scorecard-row .value.good { color: #5a8a5e; }
+
+  .scorecard-divider {
+    height: 1px;
+    background: var(--pale);
+    margin: 0.5rem 0;
+  }
+
+  /* ---- WHY ---- */
+  .why {
+    padding: 8rem 4rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .why-headline {
+    font-family: var(--serif);
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-weight: 300;
+    line-height: 1.4;
+    margin-bottom: 4rem;
+    max-width: 650px;
+  }
+
+  .why-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem 5rem;
+  }
+
+  .why-item h3 {
+    font-family: var(--sans);
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 0.8rem;
+  }
+
+  .why-item p {
+    font-size: 0.9rem;
+    color: var(--text-light);
+    line-height: 1.8;
+  }
+
+  /* ---- PRACTICE ---- */
+  .practice {
+    padding: 6rem 4rem 8rem;
+    background: var(--off-white);
+  }
+
+  .practice-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5rem;
+    align-items: center;
+  }
+
+  .practice-text h2 {
+    font-family: var(--serif);
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-weight: 300;
+    line-height: 1.4;
+    margin-bottom: 1.5rem;
+  }
+
+  .practice-text p {
+    font-size: 0.95rem;
+    color: var(--text-light);
+    line-height: 1.8;
+    margin-bottom: 1rem;
+  }
+
+  .terminal {
+    background: #1e1d1b;
+    border-radius: 4px;
+    overflow: hidden;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    line-height: 1.9;
+  }
+
+  .terminal-bar {
+    padding: 0.8rem 1rem;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    background: #2a2926;
+  }
+
+  .terminal-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #3d3b37;
+  }
+
+  .terminal-body {
+    padding: 1.5rem;
+    color: #a09c94;
+  }
+
+  .terminal-body .prompt { color: #6a9f6e; }
+  .terminal-body .cmd { color: #d4d0c8; }
+  .terminal-body .comment { color: #5c5850; }
+  .terminal-body .output { color: #8a8580; }
+  .terminal-body .warn-text { color: var(--accent-soft); }
+  .terminal-body .ok-text { color: #6a9f6e; }
+
+  .terminal-line {
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .terminal-blank { height: 0.8rem; }
+
+  /* ---- CTA ---- */
+  .final-cta {
+    padding: 10rem 4rem;
+    text-align: center;
+  }
+
+  .final-cta h2 {
+    font-family: var(--serif);
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 300;
+    line-height: 1.3;
+    margin-bottom: 1.5rem;
+  }
+
+  .final-cta p {
+    font-size: 1rem;
+    color: var(--text-light);
+    margin-bottom: 3rem;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.8;
+  }
+
+  .final-cta .btn-primary {
+    font-size: 0.85rem;
+    padding: 1rem 2.5rem;
+  }
+
+  /* ---- FOOTER ---- */
+  footer {
+    padding: 3rem 4rem;
+    border-top: 1px solid var(--pale);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .footer-mark {
+    font-family: var(--serif);
+    font-size: 1.1rem;
+    font-weight: 300;
+    color: var(--warm-gray);
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 2rem;
+  }
+
+  .footer-links a {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--warm-gray);
+    text-decoration: none;
+    transition: color 0.3s ease;
+  }
+
+  .footer-links a:hover { color: var(--text); }
+
+  /* ---- ANIMATIONS ---- */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ---- RESPONSIVE ---- */
+  @media (max-width: 900px) {
+    nav { padding: 1.5rem 2rem; }
+    .nav-links { gap: 1.5rem; }
+    .hero { padding: 7rem 2rem 4rem; }
+    .problem, .how, .why { padding: 5rem 2rem; }
+    .scorecard-section, .practice { padding: 5rem 2rem; }
+    .final-cta { padding: 6rem 2rem; }
+    footer { padding: 2rem; }
+    .debris-grid { grid-template-columns: 1fr; }
+    .how-steps { grid-template-columns: 1fr; gap: 2.5rem; }
+    .why-grid { grid-template-columns: 1fr; gap: 2rem; }
+    .practice-inner { grid-template-columns: 1fr; gap: 3rem; }
+  }
+
+  @media (max-width: 600px) {
+    .nav-links a:not(.nav-cta) { display: none; }
+    .hero-cta-row { flex-direction: column; align-items: flex-start; gap: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+  <div class="nav-mark">osojicode</div>
+  <div class="nav-links">
+    <a href="#how">How it works</a>
+    <a href="#why">Why it matters</a>
+    <a href="https://github.com/osojicode" class="nav-cta">Get started</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-label">Language-agnostic, LLM-native code analysis</div>
+  <h1>The garbage collector<br>for your project.</h1>
+  <p>Coding agents ship fast but leave debris behind — dead code, stale comments, outdated docs. Each iteration adds more, and your agents waste reasoning effort working around it instead of doing useful work. osojicode finds the cruft, measures it, and gives your agents a clean path to fix it.</p>
+  <div class="hero-cta-row">
+    <a href="https://github.com/osojicode" class="btn-primary">Install the CLI</a>
+    <a href="#how" class="btn-ghost">See how it works</a>
+  </div>
+</section>
+
+<div class="divider"><div class="divider-line"></div></div>
+
+<!-- PROBLEM -->
+<section class="problem">
+  <div class="section-label reveal">The problem</div>
+  <p class="problem-statement reveal">
+    Agents can't tell fresh from stale. A comment written eighteen months ago gets the same confidence as one written yesterday. The cruft <em>accumulates silently</em> until your agents are spending more effort reasoning around debris than doing useful work.
+  </p>
+  <div class="debris-grid reveal">
+    <div class="debris-item">
+      <h3>Junk code</h3>
+      <p>Dead symbols, unreachable paths, commented-out blocks. Code that serves no purpose but still gets parsed, interpreted, and reasoned about.</p>
+    </div>
+    <div class="debris-item">
+      <h3>Stale documentation</h3>
+      <p>Docs that were accurate when written but drifted as the code evolved. Wrong version numbers, missing features, outdated examples.</p>
+    </div>
+    <div class="debris-item">
+      <h3>Misleading comments</h3>
+      <p>"Phase 2 placeholder" on a fully implemented function. "Only Python supported" when four languages work. Every one a trap an agent walks into.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"><div class="divider-line"></div></div>
+
+<!-- HOW -->
+<section class="how" id="how">
+  <div class="section-label reveal">How it works</div>
+  <h2 class="how-headline reveal">osojicode audits your project, quantifies the debris, and produces structured findings your agents can act on.</h2>
+
+  <div class="approach-note reveal">
+    <div class="approach-marker"></div>
+    <div class="approach-content">
+      <h3>LLM-native analysis, not static rules</h3>
+      <p>osojicode doesn't wrap linters or parse ASTs. It reads your code the way an agent does — semantically, across any language, without per-language configuration. That's how it catches things rule-based tools can't: a comment that contradicts the function it describes, a doc that claims only Python is supported when four languages work, a TODO for work that was finished months ago.</p>
+    </div>
+  </div>
+
+  <div class="how-steps">
+    <div class="step reveal">
+      <div class="step-number">1</div>
+      <h3>Audit</h3>
+      <p>Shadow documentation is generated for every source file — a cited, factual account of what the code actually does. Existing docs are checked against this ground truth.</p>
+    </div>
+    <div class="step reveal">
+      <div class="step-number">2</div>
+      <h3>Measure</h3>
+      <p>A scorecard quantifies what it finds: documentation coverage, accuracy errors, junk code fraction, stale content. Numbers, not opinions.</p>
+    </div>
+    <div class="step reveal">
+      <div class="step-number">3</div>
+      <h3>Clean</h3>
+      <p>Structured findings feed directly into your coding agent's workflow. osojicode diagnoses, your agent fixes. Run it again until clean.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SCORECARD -->
+<section class="scorecard-section">
+  <div class="scorecard-inner">
+    <div class="scorecard-intro reveal">
+      <h2>Numbers, not opinions</h2>
+      <p>Every audit produces a scorecard. Track your project's health over time. Know exactly what to fix and measure the impact of fixing it.</p>
+    </div>
+    <div class="scorecard reveal">
+      <div class="scorecard-header">Audit scorecard — mcp-debugger</div>
+      <div class="scorecard-row">
+        <span class="label">Documentation coverage</span>
+        <span class="value good">81%</span>
+      </div>
+      <div class="scorecard-row">
+        <span class="label">Accuracy errors / live doc</span>
+        <span class="value warn">0.07</span>
+      </div>
+      <div class="scorecard-row">
+        <span class="label">Junk code fraction</span>
+        <span class="value warn">1.2%</span>
+      </div>
+      <div class="scorecard-divider"></div>
+      <div class="scorecard-row">
+        <span class="label">Dead symbols</span>
+        <span class="value">60</span>
+      </div>
+      <div class="scorecard-row">
+        <span class="label">Stale comments</span>
+        <span class="value">11</span>
+      </div>
+      <div class="scorecard-row">
+        <span class="label">Dead documentation</span>
+        <span class="value">3</span>
+      </div>
+      <div class="scorecard-row">
+        <span class="label">Unactuated config fields</span>
+        <span class="value">9</span>
+      </div>
+      <div class="scorecard-divider"></div>
+      <div class="scorecard-row">
+        <span class="label">Total junk lines</span>
+        <span class="value warn">1,086 across 32 files</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHY -->
+<section class="why" id="why">
+  <div class="section-label reveal">Why it matters</div>
+  <h2 class="why-headline reveal">Clean codebases are easier to maintain and cheaper to work with — for humans and agents&nbsp;alike.</h2>
+  <div class="why-grid">
+    <div class="why-item reveal">
+      <h3>Less wasted reasoning</h3>
+      <p>Every contradiction an agent has to reason around costs tokens and risks wrong answers. Remove the contradictions and the reasoning gets simpler, faster, cheaper.</p>
+    </div>
+    <div class="why-item reveal">
+      <h3>Cheaper models, same results</h3>
+      <p>A clean codebase may let a cheaper model accomplish what currently takes an expensive one. The cost of the audit pays for itself in the model tier it lets you drop to.</p>
+    </div>
+    <div class="why-item reveal">
+      <h3>Fewer broken iterations</h3>
+      <p>Agents degrade across iterations partly because accumulated cruft compounds misunderstanding. Keeping the codebase clean extends how many pivots an agent can handle before breaking.</p>
+    </div>
+    <div class="why-item reveal">
+      <h3>Maintainability for everyone</h3>
+      <p>Clean code isn't just an agent concern. Humans onboard faster, reviews go smoother, and the next contributor — human or AI — inherits a codebase that tells the truth.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PRACTICE -->
+<section class="practice">
+  <div class="practice-inner">
+    <div class="practice-text reveal">
+      <h2>Run it like you run your&nbsp;tests</h2>
+      <p>osojicode fits into the workflow you already have. CLI for local use, git hooks for ongoing maintenance, CI integration for teams.</p>
+      <p>The mess doesn't come back if you don't let it.</p>
+    </div>
+    <div class="terminal reveal">
+      <div class="terminal-bar">
+        <div class="terminal-dot"></div>
+        <div class="terminal-dot"></div>
+        <div class="terminal-dot"></div>
+      </div>
+      <div class="terminal-body">
+        <div class="terminal-line"><span class="comment"># Full audit of the project</span></div>
+        <div class="terminal-line"><span class="prompt">$ </span><span class="cmd">osoji audit</span></div>
+        <div class="terminal-blank"></div>
+        <div class="terminal-line"><span class="output">Generating shadow docs...</span></div>
+        <div class="terminal-line"><span class="output">Analyzing 437 source files</span></div>
+        <div class="terminal-line"><span class="output">Checking documentation accuracy</span></div>
+        <div class="terminal-line"><span class="output">Detecting junk code</span></div>
+        <div class="terminal-blank"></div>
+        <div class="terminal-line"><span class="ok-text">✓</span><span class="output"> Coverage: 81%</span></div>
+        <div class="terminal-line"><span class="warn-text">⚠</span><span class="output"> Junk code: 1,086 lines in 32 files</span></div>
+        <div class="terminal-line"><span class="warn-text">⚠</span><span class="output"> 9 errors, 171 warnings</span></div>
+        <div class="terminal-blank"></div>
+        <div class="terminal-line"><span class="output">Report: .osoji/audit-report.md</span></div>
+        <div class="terminal-blank"></div>
+        <div class="terminal-line"><span class="comment"># Feed findings to your agent</span></div>
+        <div class="terminal-line"><span class="prompt">$ </span><span class="cmd">osoji audit --findings | claude-code</span></div>
+        <div class="terminal-blank"></div>
+        <div class="terminal-line"><span class="comment"># Check again after cleanup</span></div>
+        <div class="terminal-line"><span class="prompt">$ </span><span class="cmd">osoji audit</span></div>
+        <div class="terminal-line"><span class="ok-text">✓</span><span class="output"> All checks passed</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="final-cta">
+  <h2 class="reveal">Eliminate the cruft.<br>Reclaim the reasoning.</h2>
+  <p class="reveal">osojicode is open source and runs locally. Your code stays on your machine.</p>
+  <a href="https://github.com/osojicode" class="btn-primary reveal">Get started</a>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-mark">osojicode</div>
+  <div class="footer-links">
+    <a href="https://github.com/osojicode">GitHub</a>
+    <a href="https://osojicode.dev/docs">Docs</a>
+    <a href="https://osojicode.dev/blog">Blog</a>
+  </div>
+</footer>
+
+<script>
+  // Nav scroll effect
+  const nav = document.getElementById('nav');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 40);
+  });
+
+  // Reveal on scroll
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => entry.target.classList.add('visible'), i * 80);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.15 });
+
+  reveals.forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
