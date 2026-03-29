@@ -1,290 +1,502 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>osojicode — The garbage collector for your project</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
 <style>
+  /* ============================================================
+     DESIGN SYSTEM TOKENS
+     Every visual decision lives here. Never hard-code values below.
+     ============================================================ */
+
   :root {
-    --white: #fafafa;
-    --off-white: #f5f4f0;
-    --pale: #edecea;
-    --warm-gray: #b8b4ad;
-    --mid-gray: #8a8580;
-    --text: #2c2a26;
-    --text-light: #5c5850;
+    /* Typography stacks */
+    --font-serif: 'Cormorant Garamond', Georgia, serif;
+    --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'DM Mono', 'SF Mono', 'Fira Code', monospace;
+
+    /* Spacing */
+    --sp-1: 0.25rem; --sp-2: 0.5rem; --sp-3: 0.75rem; --sp-4: 1rem;
+    --sp-5: 1.25rem; --sp-6: 1.5rem; --sp-8: 2rem; --sp-10: 2.5rem;
+    --sp-12: 3rem; --sp-16: 4rem; --sp-20: 5rem; --sp-24: 6rem;
+    --sp-32: 8rem; --sp-40: 10rem;
+
+    /* Page layout */
+    --page-max: 1200px;
+    --page-gutter: 4rem;
+
+    /* Radii */
+    --radius-sm: 2px;
+    --radius-md: 4px;
+    --radius-lg: 8px;
+
+    /* Motion */
+    --dur-fast: 200ms;
+    --dur-normal: 300ms;
+    --dur-slow: 500ms;
+    --dur-reveal: 700ms;
+    --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+    --ease-gentle: cubic-bezier(0.4, 0, 0.2, 1);
+    --stagger: 80ms;
+
+    /* Amber — same in both themes */
+    --terminal-accent: #c9a06e;
+
+    /* Viz tokens (resolved via var to theme-aware base tokens) */
+    --viz-healthy: var(--text-1);
+    --viz-amber: var(--terminal-accent);
+    --viz-coral: var(--accent);
+    --viz-no-data: var(--text-muted);
+    --viz-link-stroke: var(--border-default);
+    --viz-dir-stroke: var(--text-muted);
+    --viz-arc-compression: var(--text-3);
+    --viz-arc-junk: var(--terminal-accent);
+  }
+
+  /* ---- LIGHT THEME TOKENS ---- */
+  [data-theme="light"] {
+    --surface-1: #fafafa;
+    --surface-2: #f5f4f0;
+    --surface-3: #edecea;
+    --surface-elevated: #ffffff;
+    --surface-overlay: rgba(250, 250, 250, 0.85);
+
+    --text-1: #2c2a26;
+    --text-2: #5c5850;
+    --text-3: #8a8580;
+    --text-muted: #b8b4ad;
+    --text-inverse: #fafafa;
+
+    --border-subtle: #edecea;
+    --border-default: #dedad4;
+    --border-strong: #b8b4ad;
+
     --accent: #c4402f;
     --accent-soft: #d4715e;
-    --serif: 'Cormorant Garamond', Georgia, serif;
-    --sans: 'DM Sans', -apple-system, sans-serif;
-    --mono: 'DM Mono', 'SF Mono', monospace;
+    --accent-muted: #e0a99e;
+    --accent-surface: #faf0ee;
+
+    --success: #5a8a5e;
+    --success-muted: #e8f0e8;
+    --warning: #c4402f;
+    --warning-muted: #faf0ee;
+
+    --shadow-sm: 0 1px 3px rgba(44, 42, 38, 0.04);
+    --shadow-md: 0 4px 12px rgba(44, 42, 38, 0.06);
+    --shadow-lg: 0 8px 30px rgba(44, 42, 38, 0.08);
+
+    --terminal-bg: #1e1d1b;
+    --terminal-surface: #2a2926;
+    --terminal-text: #a09c94;
+    --terminal-bright: #d4d0c8;
+    --terminal-prompt: #6a9f6e;
+    --terminal-comment: #5c5850;
+    --terminal-warn: #d4715e;
+    --terminal-ok: #6a9f6e;
+
+    --theme-icon-light-display: none;
+    --theme-icon-dark-display: block;
   }
+
+  /* ---- DARK THEME TOKENS ---- */
+  [data-theme="dark"] {
+    --surface-1: #1a1917;
+    --surface-2: #211f1d;
+    --surface-3: #2a2826;
+    --surface-elevated: #302e2b;
+    --surface-overlay: rgba(26, 25, 23, 0.88);
+
+    --text-1: #e0ddd6;
+    --text-2: #a8a49c;
+    --text-3: #7a766e;
+    --text-muted: #5c5850;
+    --text-inverse: #1a1917;
+
+    --border-subtle: #2a2826;
+    --border-default: #3a3835;
+    --border-strong: #5c5850;
+
+    --accent: #d4715e;
+    --accent-soft: #c9806f;
+    --accent-muted: #6b4a42;
+    --accent-surface: #2e2220;
+
+    --success: #7aaa7e;
+    --success-muted: #1e2a1e;
+    --warning: #d4715e;
+    --warning-muted: #2e2220;
+
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
+    --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.35);
+
+    --terminal-bg: #141312;
+    --terminal-surface: #1e1d1b;
+    --terminal-text: #a09c94;
+    --terminal-bright: #d4d0c8;
+    --terminal-prompt: #7aaa7e;
+    --terminal-comment: #5c5850;
+    --terminal-warn: #d4715e;
+    --terminal-ok: #7aaa7e;
+
+    --theme-icon-light-display: block;
+    --theme-icon-dark-display: none;
+  }
+
+  /* ============================================================
+     BASE STYLES
+     ============================================================ */
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
-  html { 
-    font-size: 16px; 
+  /* Themed scrollbars */
+  [data-theme="dark"] {
+    color-scheme: dark;
+  }
+  [data-theme="light"] {
+    color-scheme: light;
+  }
+
+  html {
+    font-size: 16px;
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   body {
-    background: var(--white);
-    color: var(--text);
-    font-family: var(--sans);
+    background: var(--surface-1);
+    color: var(--text-1);
+    font-family: var(--font-sans);
     font-weight: 300;
     line-height: 1.7;
     overflow-x: hidden;
+    transition: background var(--dur-slow) var(--ease), color var(--dur-slow) var(--ease);
   }
 
-  /* ---- NAV ---- */
+  /* ============================================================
+     NAV
+     ============================================================ */
+
   nav {
     position: fixed;
     top: 0;
     width: 100%;
     z-index: 100;
-    padding: 2rem 4rem;
+    padding: var(--sp-8) var(--page-gutter);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(250, 250, 250, 0.85);
+    background: var(--surface-overlay);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-bottom: 1px solid transparent;
-    transition: border-color 0.4s ease;
+    transition: border-color var(--dur-normal) var(--ease), background var(--dur-slow) var(--ease);
   }
 
-  nav.scrolled { border-bottom-color: var(--pale); }
+  nav.scrolled { border-bottom-color: var(--border-subtle); }
 
   .nav-mark {
-    font-family: var(--serif);
+    font-family: var(--font-serif);
     font-size: 1.5rem;
     font-weight: 300;
     letter-spacing: 0.04em;
-    color: var(--text);
+    color: var(--text-1);
+  }
+
+  .nav-actions {
+    display: flex;
+    gap: var(--sp-10);
+    align-items: center;
   }
 
   .nav-links {
     display: flex;
-    gap: 2.5rem;
+    gap: var(--sp-10);
     align-items: center;
   }
 
   .nav-links a {
-    font-family: var(--sans);
+    font-family: var(--font-sans);
     font-size: 0.8rem;
     font-weight: 400;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--mid-gray);
+    color: var(--text-3);
     text-decoration: none;
-    transition: color 0.3s ease;
+    transition: color var(--dur-normal) var(--ease);
   }
 
-  .nav-links a:hover { color: var(--text); }
+  .nav-links a:hover { color: var(--text-1); }
 
   .nav-cta {
-    font-family: var(--mono) !important;
+    font-family: var(--font-mono) !important;
     font-size: 0.75rem !important;
-    background: var(--text);
-    color: var(--white) !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    background: var(--text-1);
+    color: var(--text-inverse) !important;
     padding: 0.6rem 1.4rem;
-    border-radius: 2px;
-    transition: background 0.3s ease !important;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background var(--dur-normal) var(--ease) !important;
   }
 
   .nav-cta:hover { background: var(--accent) !important; }
 
-  /* ---- HERO ---- */
+  .theme-toggle {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-3);
+    transition: color var(--dur-normal) var(--ease), border-color var(--dur-normal) var(--ease);
+  }
+
+  .theme-toggle:hover { color: var(--text-1); border-color: var(--border-strong); }
+
+  .theme-toggle .icon-sun { display: var(--theme-icon-light-display); }
+  .theme-toggle .icon-moon { display: var(--theme-icon-dark-display); }
+
+  /* ============================================================
+     HERO
+     ============================================================ */
+
   .hero {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: 8rem 4rem 6rem;
+    padding: var(--sp-32) var(--page-gutter) var(--sp-24);
     max-width: 900px;
   }
 
   .hero-label {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.75rem;
     font-weight: 300;
     letter-spacing: 0.15em;
     text-transform: uppercase;
-    color: var(--warm-gray);
-    margin-bottom: 2.5rem;
+    color: var(--text-muted);
+    margin-bottom: var(--sp-10);
     opacity: 0;
-    animation: fadeUp 0.8s ease 0.2s forwards;
+    animation: fadeUp 0.8s var(--ease) 0.2s forwards;
   }
 
   .hero h1 {
-    font-family: var(--serif);
+    font-family: var(--font-serif);
     font-size: clamp(2.8rem, 5.5vw, 4.2rem);
     font-weight: 300;
     line-height: 1.15;
     letter-spacing: -0.01em;
-    color: var(--text);
-    margin-bottom: 2.5rem;
+    margin-bottom: var(--sp-10);
     opacity: 0;
-    animation: fadeUp 0.8s ease 0.4s forwards;
+    animation: fadeUp 0.8s var(--ease) 0.4s forwards;
   }
 
   .hero p {
     font-size: 1.15rem;
+    font-weight: 300;
     line-height: 1.8;
-    color: var(--text-light);
+    color: var(--text-2);
     max-width: 600px;
+    margin-bottom: var(--sp-12);
     opacity: 0;
-    animation: fadeUp 0.8s ease 0.6s forwards;
+    animation: fadeUp 0.8s var(--ease) 0.6s forwards;
   }
 
   .hero-cta-row {
-    margin-top: 3rem;
     display: flex;
+    gap: var(--sp-8);
     align-items: center;
-    gap: 2rem;
     opacity: 0;
-    animation: fadeUp 0.8s ease 0.8s forwards;
+    animation: fadeUp 0.8s var(--ease) 0.8s forwards;
   }
 
   .btn-primary {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.8rem;
     font-weight: 400;
     letter-spacing: 0.04em;
-    background: var(--text);
-    color: var(--white);
+    background: var(--text-1);
+    color: var(--text-inverse);
     padding: 0.9rem 2rem;
     border: none;
-    border-radius: 2px;
-    cursor: pointer;
+    border-radius: var(--radius-sm);
     text-decoration: none;
-    transition: background 0.3s ease;
+    cursor: pointer;
+    transition: background var(--dur-normal) var(--ease);
   }
 
   .btn-primary:hover { background: var(--accent); }
 
   .btn-ghost {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.8rem;
     font-weight: 400;
     letter-spacing: 0.04em;
-    color: var(--mid-gray);
+    color: var(--text-3);
     text-decoration: none;
+    border-bottom: 1px solid var(--text-3);
     padding: 0.9rem 0;
-    border-bottom: 1px solid var(--pale);
-    transition: color 0.3s ease, border-color 0.3s ease;
+    transition: color var(--dur-normal) var(--ease), border-color var(--dur-normal) var(--ease);
   }
 
-  .btn-ghost:hover { color: var(--text); border-color: var(--text); }
+  .btn-ghost:hover { color: var(--text-1); border-color: var(--text-1); }
 
-  /* ---- DIVIDER ---- */
+  /* ============================================================
+     DIVIDERS
+     ============================================================ */
+
   .divider {
-    width: 100%;
-    padding: 0 4rem;
+    padding: 0 var(--page-gutter);
+    max-width: var(--page-max);
+    margin: 0 auto;
   }
 
   .divider-line {
     height: 1px;
-    background: var(--pale);
-    width: 100%;
+    background: var(--border-subtle);
+    transition: background var(--dur-slow) var(--ease);
   }
 
-  /* ---- PROBLEM ---- */
+  /* ============================================================
+     SECTION LABELS
+     ============================================================ */
+
+  .section-label {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 300;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: var(--sp-10);
+    transition: color var(--dur-slow) var(--ease);
+  }
+
+  /* ============================================================
+     PROBLEM
+     ============================================================ */
+
   .problem {
-    padding: 8rem 4rem;
-    max-width: 1200px;
+    padding: var(--sp-32) var(--page-gutter);
+    max-width: var(--page-max);
     margin: 0 auto;
   }
 
-  .section-label {
-    font-family: var(--mono);
-    font-size: 0.7rem;
-    font-weight: 300;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--warm-gray);
-    margin-bottom: 3rem;
-  }
-
   .problem-statement {
-    font-family: var(--serif);
-    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-size: 1.15rem;
     font-weight: 300;
-    line-height: 1.5;
-    color: var(--text);
-    max-width: 750px;
-    margin-bottom: 4rem;
+    line-height: 1.8;
+    color: var(--text-2);
+    max-width: 700px;
+    margin-bottom: var(--sp-16);
   }
 
-  .problem-statement em {
-    font-style: italic;
-    color: var(--accent-soft);
-  }
+  .problem-statement em { font-style: italic; color: var(--text-1); }
 
   .debris-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 1px;
-    background: var(--pale);
-    border: 1px solid var(--pale);
+    border: 1px solid var(--border-subtle);
+    transition: border-color var(--dur-slow) var(--ease);
   }
 
   .debris-item {
-    background: var(--white);
-    padding: 2.5rem;
+    padding: var(--sp-10);
+    border-right: 1px solid var(--border-subtle);
+    transition: border-color var(--dur-slow) var(--ease);
   }
 
+  .debris-item:last-child { border-right: none; }
+
   .debris-item h3 {
-    font-family: var(--mono);
-    font-size: 0.75rem;
-    font-weight: 400;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--text);
-    margin-bottom: 1rem;
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 0.8rem;
   }
 
   .debris-item p {
     font-size: 0.9rem;
-    color: var(--text-light);
+    color: var(--text-2);
     line-height: 1.7;
   }
 
-  /* ---- HOW ---- */
+  /* ============================================================
+     HOW
+     ============================================================ */
+
   .how {
-    padding: 8rem 4rem;
-    max-width: 1200px;
+    padding: var(--sp-32) var(--page-gutter);
+    max-width: var(--page-max);
     margin: 0 auto;
   }
 
   .how-headline {
-    font-family: var(--serif);
+    font-family: var(--font-serif);
     font-size: clamp(1.6rem, 3vw, 2.2rem);
     font-weight: 300;
     line-height: 1.4;
-    margin-bottom: 4rem;
-    max-width: 600px;
+    margin-bottom: var(--sp-16);
+    max-width: 700px;
+  }
+
+  .approach-note {
+    display: flex;
+    gap: var(--sp-6);
+    margin-bottom: var(--sp-16);
+    max-width: 700px;
+  }
+
+  .approach-marker {
+    width: 2px;
+    background: var(--accent);
+    border-radius: 1px;
+    flex-shrink: 0;
+  }
+
+  .approach-content h3 {
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+
+  .approach-content p {
+    font-size: 0.9rem;
+    color: var(--text-2);
+    line-height: 1.8;
   }
 
   .how-steps {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 4rem;
+    gap: var(--sp-16);
   }
 
   .step-number {
-    font-family: var(--serif);
+    font-family: var(--font-serif);
     font-size: 3rem;
     font-weight: 300;
-    color: var(--pale);
-    margin-bottom: 1.5rem;
+    color: var(--border-subtle);
+    margin-bottom: var(--sp-6);
     line-height: 1;
+    transition: color var(--dur-slow) var(--ease);
   }
 
   .step h3 {
-    font-family: var(--sans);
+    font-family: var(--font-sans);
     font-size: 1rem;
     font-weight: 500;
     margin-bottom: 0.8rem;
@@ -292,85 +504,61 @@
 
   .step p {
     font-size: 0.9rem;
-    color: var(--text-light);
+    color: var(--text-2);
     line-height: 1.7;
   }
 
-  .approach-note {
-    display: flex;
-    gap: 2rem;
-    margin-bottom: 4rem;
-    padding: 2.5rem 0;
-    max-width: 680px;
-  }
+  /* ============================================================
+     SCORECARD
+     ============================================================ */
 
-  .approach-marker {
-    width: 2px;
-    min-height: 100%;
-    background: var(--pale);
-    flex-shrink: 0;
-  }
-
-  .approach-content h3 {
-    font-family: var(--sans);
-    font-size: 0.95rem;
-    font-weight: 500;
-    margin-bottom: 0.8rem;
-    color: var(--text);
-  }
-
-  .approach-content p {
-    font-size: 0.9rem;
-    color: var(--text-light);
-    line-height: 1.8;
-  }
-
-  /* ---- SCORECARD ---- */
   .scorecard-section {
-    padding: 6rem 4rem 8rem;
-    background: var(--off-white);
+    padding: var(--sp-24) var(--page-gutter) var(--sp-32);
+    background: var(--surface-2);
+    transition: background var(--dur-slow) var(--ease);
   }
 
   .scorecard-inner {
-    max-width: 1200px;
+    max-width: var(--page-max);
     margin: 0 auto;
   }
 
   .scorecard-intro {
     max-width: 600px;
-    margin-bottom: 4rem;
+    margin-bottom: var(--sp-16);
   }
 
   .scorecard-intro h2 {
-    font-family: var(--serif);
+    font-family: var(--font-serif);
     font-size: clamp(1.6rem, 3vw, 2.2rem);
     font-weight: 300;
     line-height: 1.4;
-    margin-bottom: 1.5rem;
+    margin-bottom: var(--sp-6);
   }
 
   .scorecard-intro p {
     font-size: 0.95rem;
-    color: var(--text-light);
+    color: var(--text-2);
     line-height: 1.8;
   }
 
   .scorecard {
-    background: var(--white);
-    border: 1px solid var(--pale);
-    padding: 3rem;
-    font-family: var(--mono);
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    padding: var(--sp-12);
+    font-family: var(--font-mono);
     max-width: 640px;
+    transition: background var(--dur-slow) var(--ease), border-color var(--dur-slow) var(--ease);
   }
 
   .scorecard-header {
     font-size: 0.7rem;
     letter-spacing: 0.15em;
     text-transform: uppercase;
-    color: var(--warm-gray);
-    padding-bottom: 1.5rem;
-    border-bottom: 1px solid var(--pale);
-    margin-bottom: 1.5rem;
+    color: var(--text-muted);
+    padding-bottom: var(--sp-6);
+    border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: var(--sp-6);
   }
 
   .scorecard-row {
@@ -381,50 +569,442 @@
     font-size: 0.85rem;
   }
 
-  .scorecard-row .label {
-    color: var(--text-light);
-    font-weight: 300;
-  }
-
-  .scorecard-row .value {
-    color: var(--text);
-    font-weight: 400;
-  }
-
-  .scorecard-row .value.warn { color: var(--accent); }
-
-  .scorecard-row .value.good { color: #5a8a5e; }
+  .scorecard-row .label { color: var(--text-2); font-weight: 300; }
+  .scorecard-row .value { color: var(--text-1); font-weight: 400; }
+  .scorecard-row .value.warn { color: var(--accent-soft); }
+  .scorecard-row .value.good { color: var(--success); }
 
   .scorecard-divider {
     height: 1px;
-    background: var(--pale);
-    margin: 0.5rem 0;
+    background: var(--border-subtle);
+    margin: var(--sp-2) 0;
+    transition: background var(--dur-slow) var(--ease);
   }
 
-  /* ---- WHY ---- */
+  /* ============================================================
+     DEMO — D3 OBSERVATORY VISUALIZATION
+     ============================================================ */
+
+  .demo {
+    padding: var(--sp-32) var(--page-gutter) var(--sp-24);
+    max-width: var(--page-max);
+    margin: 0 auto;
+  }
+
+  .demo-headline {
+    font-family: var(--font-serif);
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-weight: 300;
+    line-height: 1.4;
+    margin-bottom: var(--sp-6);
+    max-width: 700px;
+  }
+
+  .demo-intro {
+    font-size: 0.95rem;
+    color: var(--text-2);
+    line-height: 1.8;
+    margin-bottom: var(--sp-12);
+    max-width: 600px;
+  }
+
+  .demo-graph-wrap {
+    position: relative;
+    height: 600px;
+    background: var(--surface-3);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    transition: background var(--dur-slow) var(--ease), border-color var(--dur-slow) var(--ease);
+  }
+
+  .demo-graph-wrap svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .demo-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--text-3);
+    letter-spacing: 0.08em;
+  }
+
+  .demo-loading.hidden { display: none; }
+
+  /* Graph elements */
+  .demo-graph-wrap .link {
+    stroke: var(--viz-link-stroke);
+    stroke-opacity: 0.25;
+    stroke-width: 1;
+    transition: stroke var(--dur-slow) var(--ease);
+  }
+
+  .demo-graph-wrap .link.highlighted {
+    stroke: var(--border-strong);
+    stroke-opacity: 0.7;
+    stroke-width: 1.5;
+  }
+
+  .demo-graph-wrap .node-file circle { cursor: pointer; }
+  .demo-graph-wrap .node-file:hover circle { filter: brightness(1.3); }
+
+  .demo-graph-wrap .node-dir circle {
+    fill: color-mix(in srgb, var(--text-muted) 6%, transparent);
+    stroke: var(--viz-dir-stroke);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+    cursor: pointer;
+    transition: fill var(--dur-slow) var(--ease), stroke var(--dur-slow) var(--ease);
+  }
+
+  .demo-graph-wrap .node-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    fill: var(--text-3);
+    text-anchor: middle;
+    pointer-events: none;
+    user-select: none;
+    transition: fill var(--dur-slow) var(--ease);
+  }
+
+  .demo-graph-wrap .arc-ring {
+    fill: none;
+    stroke-linecap: round;
+  }
+
+  .demo-graph-wrap .error-ring {
+    fill: none;
+  }
+
+  /* Tooltip */
+  .demo-tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    padding: var(--sp-3) var(--sp-4);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    line-height: 1.5;
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    transition: opacity 150ms, background var(--dur-slow) var(--ease), border-color var(--dur-slow) var(--ease);
+    z-index: 50;
+    max-width: 260px;
+  }
+
+  .demo-tooltip.visible { opacity: 1; }
+
+  .tooltip-name {
+    font-weight: 400;
+    color: var(--text-1);
+    margin-bottom: 4px;
+    word-break: break-all;
+  }
+
+  .tooltip-row {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--sp-4);
+  }
+
+  .tooltip-label { color: var(--text-3); }
+  .tooltip-value { color: var(--text-1); font-weight: 400; }
+
+  .tooltip-badges { margin-top: 4px; }
+  .tooltip-badges .badge,
+  .detail-badges .badge {
+    display: inline-block;
+    font-size: 0.6rem;
+    letter-spacing: 0.04em;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    color: var(--accent);
+    border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+
+  /* Detail panel */
+  .demo-detail {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 360px;
+    background: var(--surface-2);
+    border-left: 1px solid var(--border-default);
+    z-index: 60;
+    transform: translateX(100%);
+    transition: transform 250ms var(--ease), background var(--dur-slow) var(--ease), border-color var(--dur-slow) var(--ease);
+    overflow-y: auto;
+    padding: var(--sp-6);
+  }
+
+  .demo-detail.open { transform: translateX(0); }
+
+  .demo-detail-close {
+    position: absolute;
+    top: var(--sp-4);
+    right: var(--sp-4);
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    background: var(--surface-1);
+    color: var(--text-3);
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color var(--dur-normal) var(--ease);
+  }
+
+  .demo-detail-close:hover { color: var(--text-1); }
+
+  .detail-title {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: var(--text-1);
+    margin-bottom: 2px;
+    padding-right: 36px;
+    word-break: break-all;
+  }
+
+  .detail-path {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--text-3);
+    margin-bottom: var(--sp-4);
+    word-break: break-all;
+  }
+
+  .detail-health-bar {
+    height: 4px;
+    background: var(--border-subtle);
+    border-radius: 2px;
+    margin-bottom: var(--sp-3);
+    overflow: hidden;
+  }
+
+  .detail-health-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 300ms var(--ease);
+  }
+
+  .detail-meta {
+    display: flex;
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+    margin-bottom: var(--sp-4);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--text-3);
+  }
+
+  .detail-badges { margin-bottom: var(--sp-4); }
+
+  .detail-arcs {
+    margin-bottom: var(--sp-4);
+  }
+
+  .detail-arc-item {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-2);
+    margin-bottom: 2px;
+  }
+
+  .detail-arc-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .detail-section {
+    border-top: 1px solid var(--border-subtle);
+    padding-top: var(--sp-4);
+    margin-top: var(--sp-4);
+  }
+
+  .detail-section h4 {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: var(--sp-3);
+  }
+
+  .detail-kv {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    padding: 3px 0;
+  }
+
+  .detail-kv .key { color: var(--text-3); }
+  .detail-kv .val { color: var(--text-1); font-weight: 400; }
+
+  .detail-purpose {
+    font-size: 0.82rem;
+    color: var(--text-2);
+    line-height: 1.6;
+  }
+
+  .finding-card {
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    padding: var(--sp-3);
+    margin-bottom: var(--sp-2);
+    font-size: 0.72rem;
+    transition: background var(--dur-slow) var(--ease), border-color var(--dur-slow) var(--ease);
+  }
+
+  .finding-header {
+    display: flex;
+    gap: var(--sp-2);
+    align-items: center;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+  }
+
+  .finding-severity {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 1px 5px;
+    border-radius: var(--radius-sm);
+  }
+
+  .finding-severity.error { background: var(--warning-muted); color: var(--accent); }
+  .finding-severity.warning { background: color-mix(in srgb, var(--terminal-accent) 15%, transparent); color: var(--terminal-accent); }
+  .finding-severity.info { background: var(--surface-3); color: var(--text-3); }
+
+  .finding-category {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    color: var(--text-3);
+  }
+
+  .finding-origin {
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 1px 4px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-default);
+    color: var(--text-3);
+  }
+
+  .finding-message {
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    color: var(--text-2);
+    line-height: 1.5;
+    margin-bottom: 4px;
+  }
+
+  .finding-remediation {
+    font-family: var(--font-sans);
+    font-size: 0.72rem;
+    color: var(--text-3);
+    line-height: 1.5;
+    font-style: italic;
+  }
+
+  .detail-preview {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    line-height: 1.7;
+    color: var(--text-2);
+    white-space: pre-wrap;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  /* Legend */
+  .demo-legend {
+    position: absolute;
+    bottom: var(--sp-4);
+    left: var(--sp-4);
+    display: flex;
+    gap: var(--sp-4);
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.06em;
+    color: var(--text-3);
+    z-index: 10;
+  }
+
+  .demo-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .demo-legend-swatch {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  /* Mobile fallback */
+  .demo-fallback {
+    display: none;
+    text-align: center;
+    padding: var(--sp-16) var(--page-gutter);
+    font-size: 0.9rem;
+    color: var(--text-3);
+    line-height: 1.8;
+  }
+
+  /* ============================================================
+     WHY
+     ============================================================ */
+
   .why {
-    padding: 8rem 4rem;
-    max-width: 1200px;
+    padding: var(--sp-32) var(--page-gutter);
+    max-width: var(--page-max);
     margin: 0 auto;
   }
 
   .why-headline {
-    font-family: var(--serif);
+    font-family: var(--font-serif);
     font-size: clamp(1.6rem, 3vw, 2.2rem);
     font-weight: 300;
     line-height: 1.4;
-    margin-bottom: 4rem;
+    margin-bottom: var(--sp-16);
     max-width: 650px;
   }
 
   .why-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 3rem 5rem;
+    gap: var(--sp-12) var(--sp-20);
   }
 
   .why-item h3 {
-    font-family: var(--sans);
+    font-family: var(--font-sans);
     font-size: 1rem;
     font-weight: 500;
     margin-bottom: 0.8rem;
@@ -432,47 +1012,154 @@
 
   .why-item p {
     font-size: 0.9rem;
-    color: var(--text-light);
+    color: var(--text-2);
     line-height: 1.8;
   }
 
-  /* ---- PRACTICE ---- */
+  /* ============================================================
+     TEAMS
+     ============================================================ */
+
+  .teams {
+    padding: var(--sp-24) var(--page-gutter) var(--sp-32);
+    background: var(--surface-2);
+    transition: background var(--dur-slow) var(--ease);
+  }
+
+  .teams-inner {
+    max-width: var(--page-max);
+    margin: 0 auto;
+  }
+
+  .teams-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-20);
+    align-items: start;
+  }
+
+  .teams-text h2 {
+    font-family: var(--font-serif);
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-weight: 300;
+    line-height: 1.4;
+    margin-bottom: var(--sp-6);
+  }
+
+  .teams-text > p {
+    font-size: 0.95rem;
+    color: var(--text-2);
+    line-height: 1.8;
+    margin-bottom: var(--sp-8);
+  }
+
+  .teams-features {
+    list-style: none;
+    margin-bottom: var(--sp-10);
+  }
+
+  .teams-features li {
+    font-size: 0.9rem;
+    color: var(--text-2);
+    line-height: 1.8;
+    padding-left: 1.2rem;
+    position: relative;
+  }
+
+  .teams-features li::before {
+    content: '\2192';
+    position: absolute;
+    left: 0;
+    color: var(--text-muted);
+  }
+
+  .teams-features code {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    background: var(--surface-3);
+    padding: 1px 5px;
+    border-radius: var(--radius-sm);
+  }
+
+  .teams-cta-row {
+    display: flex;
+    gap: var(--sp-6);
+    align-items: center;
+  }
+
+  .teams-sparkline {
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: var(--sp-6);
+    transition: background var(--dur-slow) var(--ease), border-color var(--dur-slow) var(--ease);
+  }
+
+  .sparkline-header {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: var(--sp-2);
+  }
+
+  .sparkline-value {
+    font-family: var(--font-mono);
+    font-size: 1.6rem;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    color: var(--text-1);
+    margin-bottom: var(--sp-4);
+  }
+
+  .sparkline-chart { display: block; width: 100%; }
+  .sparkline-chart .grid-line { stroke: var(--border-subtle); stroke-width: 0.5; }
+  .sparkline-chart .trend-line { stroke: var(--success); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .sparkline-chart .trend-area { fill: var(--success); opacity: 0.08; }
+  .sparkline-chart .data-point { fill: var(--success); }
+  .sparkline-chart .axis-label { font-family: var(--font-mono); font-size: 9px; fill: var(--text-muted); }
+
+  /* ============================================================
+     PRACTICE / TERMINAL
+     ============================================================ */
+
   .practice {
-    padding: 6rem 4rem 8rem;
-    background: var(--off-white);
+    padding: var(--sp-32) var(--page-gutter);
+    max-width: var(--page-max);
+    margin: 0 auto;
   }
 
   .practice-inner {
-    max-width: 1200px;
-    margin: 0 auto;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 5rem;
+    gap: var(--sp-20);
     align-items: center;
   }
 
   .practice-text h2 {
-    font-family: var(--serif);
+    font-family: var(--font-serif);
     font-size: clamp(1.6rem, 3vw, 2.2rem);
     font-weight: 300;
     line-height: 1.4;
-    margin-bottom: 1.5rem;
+    margin-bottom: var(--sp-6);
   }
 
   .practice-text p {
     font-size: 0.95rem;
-    color: var(--text-light);
+    color: var(--text-2);
     line-height: 1.8;
-    margin-bottom: 1rem;
+    margin-bottom: var(--sp-4);
   }
 
   .terminal {
-    background: #1e1d1b;
-    border-radius: 4px;
+    background: var(--terminal-bg);
+    border-radius: var(--radius-md);
     overflow: hidden;
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.78rem;
     line-height: 1.9;
+    transition: background var(--dur-slow) var(--ease);
   }
 
   .terminal-bar {
@@ -480,7 +1167,8 @@
     display: flex;
     gap: 6px;
     align-items: center;
-    background: #2a2926;
+    background: var(--terminal-surface);
+    transition: background var(--dur-slow) var(--ease);
   }
 
   .terminal-dot {
@@ -491,87 +1179,132 @@
   }
 
   .terminal-body {
-    padding: 1.5rem;
-    color: #a09c94;
+    padding: var(--sp-6);
+    color: var(--terminal-text);
   }
 
-  .terminal-body .prompt { color: #6a9f6e; }
-  .terminal-body .cmd { color: #d4d0c8; }
-  .terminal-body .comment { color: #5c5850; }
-  .terminal-body .output { color: #8a8580; }
-  .terminal-body .warn-text { color: var(--accent-soft); }
-  .terminal-body .ok-text { color: #6a9f6e; }
+  .terminal-body .prompt { color: var(--terminal-prompt); }
+  .terminal-body .cmd { color: var(--terminal-bright); }
+  .terminal-body .comment { color: var(--terminal-comment); }
+  .terminal-body .output { color: var(--terminal-text); }
+  .terminal-body .warn-text { color: var(--terminal-warn); }
+  .terminal-body .ok-text { color: var(--terminal-ok); }
+  .terminal-body .accent-text { color: var(--terminal-accent); }
 
-  .terminal-line {
-    white-space: nowrap;
-    overflow: hidden;
-  }
-
+  .terminal-line { white-space: nowrap; overflow: hidden; }
   .terminal-blank { height: 0.8rem; }
 
-  /* ---- CTA ---- */
+  /* ============================================================
+     FINAL CTA
+     ============================================================ */
+
   .final-cta {
-    padding: 10rem 4rem;
+    padding: var(--sp-40) var(--page-gutter);
     text-align: center;
   }
 
   .final-cta h2 {
-    font-family: var(--serif);
+    font-family: var(--font-serif);
     font-size: clamp(2rem, 4vw, 3rem);
     font-weight: 300;
     line-height: 1.3;
-    margin-bottom: 1.5rem;
+    margin-bottom: var(--sp-6);
   }
 
   .final-cta p {
     font-size: 1rem;
-    color: var(--text-light);
-    margin-bottom: 3rem;
+    color: var(--text-2);
+    margin-bottom: var(--sp-12);
     max-width: 480px;
     margin-left: auto;
     margin-right: auto;
     line-height: 1.8;
   }
 
-  .final-cta .btn-primary {
-    font-size: 0.85rem;
-    padding: 1rem 2.5rem;
-  }
-
-  /* ---- FOOTER ---- */
-  footer {
-    padding: 3rem 4rem;
-    border-top: 1px solid var(--pale);
+  .final-cta-row {
     display: flex;
-    justify-content: space-between;
+    gap: var(--sp-8);
+    justify-content: center;
     align-items: center;
   }
 
+  /* ============================================================
+     FOOTER
+     ============================================================ */
+
+  footer {
+    padding: var(--sp-12) var(--page-gutter);
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: border-color var(--dur-slow) var(--ease);
+  }
+
   .footer-mark {
-    font-family: var(--serif);
+    font-family: var(--font-serif);
     font-size: 1.1rem;
     font-weight: 300;
-    color: var(--warm-gray);
+    color: var(--text-muted);
   }
 
   .footer-links {
     display: flex;
-    gap: 2rem;
+    gap: var(--sp-8);
   }
 
   .footer-links a {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.7rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--warm-gray);
+    color: var(--text-muted);
     text-decoration: none;
-    transition: color 0.3s ease;
+    transition: color var(--dur-normal) var(--ease);
   }
 
-  .footer-links a:hover { color: var(--text); }
+  .footer-links a:hover { color: var(--text-1); }
 
-  /* ---- ANIMATIONS ---- */
+  /* ============================================================
+     COPY-TO-CLIPBOARD SNIPPET
+     ============================================================ */
+
+  .copy-snippet {
+    position: relative;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    background: var(--text-1);
+    color: var(--text-inverse);
+    padding: 0.9rem 2rem;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background var(--dur-normal) var(--ease);
+  }
+
+  .copy-snippet:hover { background: var(--accent); }
+
+  .copy-snippet.copied::after {
+    content: 'Copied!';
+    position: absolute;
+    top: -1.6rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    color: var(--success);
+    white-space: nowrap;
+    animation: fadeOut 1.2s var(--ease) 0.3s forwards;
+  }
+
+  @keyframes fadeOut { to { opacity: 0; } }
+
+  /* ============================================================
+     ANIMATIONS
+     ============================================================ */
+
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
@@ -580,7 +1313,7 @@
   .reveal {
     opacity: 0;
     transform: translateY(16px);
-    transition: opacity 0.7s ease, transform 0.7s ease;
+    transition: opacity var(--dur-reveal) var(--ease), transform var(--dur-reveal) var(--ease);
   }
 
   .reveal.visible {
@@ -588,24 +1321,33 @@
     transform: translateY(0);
   }
 
-  /* ---- RESPONSIVE ---- */
+  /* ============================================================
+     RESPONSIVE
+     ============================================================ */
+
   @media (max-width: 900px) {
-    nav { padding: 1.5rem 2rem; }
-    .nav-links { gap: 1.5rem; }
-    .hero { padding: 7rem 2rem 4rem; }
-    .problem, .how, .why { padding: 5rem 2rem; }
-    .scorecard-section, .practice { padding: 5rem 2rem; }
-    .final-cta { padding: 6rem 2rem; }
-    footer { padding: 2rem; }
+    :root { --page-gutter: 2rem; }
+    .hero { padding: 7rem var(--page-gutter) var(--sp-16); }
+    .problem, .how, .why, .practice { padding: var(--sp-20) var(--page-gutter); }
+    .scorecard-section, .teams { padding: var(--sp-20) var(--page-gutter); }
+    .demo { padding: var(--sp-20) var(--page-gutter); }
+    .final-cta { padding: var(--sp-24) var(--page-gutter); }
     .debris-grid { grid-template-columns: 1fr; }
-    .how-steps { grid-template-columns: 1fr; gap: 2.5rem; }
-    .why-grid { grid-template-columns: 1fr; gap: 2rem; }
-    .practice-inner { grid-template-columns: 1fr; gap: 3rem; }
+    .debris-item { border-right: none; border-bottom: 1px solid var(--border-subtle); }
+    .debris-item:last-child { border-bottom: none; }
+    .how-steps { grid-template-columns: 1fr; gap: var(--sp-10); }
+    .why-grid { grid-template-columns: 1fr; gap: var(--sp-8); }
+    .practice-inner { grid-template-columns: 1fr; gap: var(--sp-12); }
+    .teams-content { grid-template-columns: 1fr; gap: var(--sp-12); }
+    .demo-graph-wrap { display: none; }
+    .demo-fallback { display: block; }
+    .final-cta-row { flex-direction: column; gap: var(--sp-4); }
   }
 
   @media (max-width: 600px) {
     .nav-links a:not(.nav-cta) { display: none; }
-    .hero-cta-row { flex-direction: column; align-items: flex-start; gap: 1rem; }
+    .hero-cta-row { flex-direction: column; align-items: flex-start; gap: var(--sp-4); }
+    .teams-cta-row { flex-direction: column; align-items: flex-start; gap: var(--sp-4); }
   }
 </style>
 </head>
@@ -614,21 +1356,33 @@
 <!-- NAV -->
 <nav id="nav">
   <div class="nav-mark">osojicode</div>
-  <div class="nav-links">
-    <a href="#how">How it works</a>
-    <a href="#why">Why it matters</a>
-    <a href="https://github.com/osojicode" class="nav-cta">Get started</a>
+  <div class="nav-actions">
+    <div class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="#demo">See it work</a>
+      <a href="#teams">Teams</a>
+      <a href="https://github.com/osojicode/osoji" target="_blank" rel="noopener">GitHub</a>
+    </div>
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+      <svg class="icon-sun" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.5M8 13v1.5M1.5 8H3M13 8h1.5M3.17 3.17l1.06 1.06M11.77 11.77l1.06 1.06M3.17 12.83l1.06-1.06M11.77 4.23l1.06-1.06"/>
+      </svg>
+      <svg class="icon-moon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <path d="M13.5 8.5a5.5 5.5 0 01-7.5-5 5.5 5.5 0 107.5 5z"/>
+      </svg>
+    </button>
+    <button class="nav-cta copy-snippet" data-copy="pip install osojicode">pip install osojicode</button>
   </div>
 </nav>
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-label">Language-agnostic, LLM-native code analysis</div>
+  <div class="hero-label">AST-verified, LLM-native code hygiene</div>
   <h1>The garbage collector<br>for your project.</h1>
-  <p>Coding agents ship fast but leave debris behind — dead code, stale comments, outdated docs. Each iteration adds more, and your agents waste reasoning effort working around it instead of doing useful work. osojicode finds the cruft, measures it, and gives your agents a clean path to fix it.</p>
+  <p>Coding agents ship fast but leave debris behind — dead code, stale comments, outdated docs. osojicode finds it all: deterministic AST analysis proves dead symbols unreachable with mathematical certainty, while LLM semantic reasoning catches stale docs, misleading comments, and naming contradictions across any language. Structured findings your agents can act on directly.</p>
   <div class="hero-cta-row">
-    <a href="https://github.com/osojicode" class="btn-primary">Install the CLI</a>
-    <a href="#how" class="btn-ghost">See how it works</a>
+    <button class="copy-snippet" data-copy="pip install osojicode">pip install osojicode</button>
+    <a href="#demo" class="btn-ghost">See it work &rarr;</a>
   </div>
 </section>
 
@@ -643,15 +1397,15 @@
   <div class="debris-grid reveal">
     <div class="debris-item">
       <h3>Junk code</h3>
-      <p>Dead symbols, unreachable paths, commented-out blocks. Code that serves no purpose but still gets parsed, interpreted, and reasoned about.</p>
+      <p>AST-proven dead symbols, unreachable parameters, unused dependencies, abandoned CI steps. Code that serves no purpose but still gets parsed, interpreted, and reasoned about.</p>
     </div>
     <div class="debris-item">
       <h3>Stale documentation</h3>
-      <p>Docs that were accurate when written but drifted as the code evolved. Wrong version numbers, missing features, outdated examples.</p>
+      <p>Shadow docs generated from source reveal what your existing docs actually say versus what the code does. Wrong version numbers, missing features, outdated examples — all validated against ground truth.</p>
     </div>
     <div class="debris-item">
       <h3>Misleading comments</h3>
-      <p>"Phase 2 placeholder" on a fully implemented function. "Only Python supported" when four languages work. Every one a trap an agent walks into.</p>
+      <p>String contracts that silently break when code changes. "Phase 2 placeholder" on a fully implemented function. "Only Python supported" when four languages work. Every one a trap an agent walks into.</p>
     </div>
   </div>
 </section>
@@ -661,13 +1415,13 @@
 <!-- HOW -->
 <section class="how" id="how">
   <div class="section-label reveal">How it works</div>
-  <h2 class="how-headline reveal">osojicode audits your project, quantifies the debris, and produces structured findings your agents can act on.</h2>
+  <h2 class="how-headline reveal">Two-phase analysis: deterministic where possible, semantic everywhere&nbsp;else.</h2>
 
   <div class="approach-note reveal">
     <div class="approach-marker"></div>
     <div class="approach-content">
-      <h3>LLM-native analysis, not static rules</h3>
-      <p>osojicode doesn't wrap linters or parse ASTs. It reads your code the way an agent does — semantically, across any language, without per-language configuration. That's how it catches things rule-based tools can't: a comment that contradicts the function it describes, a doc that claims only Python is supported when four languages work, a TODO for work that was finished months ago.</p>
+      <h3>AST certainty + LLM comprehension</h3>
+      <p>Phase one: AST plugins extract facts with mathematical certainty. Python via stdlib <code>ast</code>, TypeScript via <code>ts-morph</code>. Dead symbols proven unreachable get confidence&nbsp;1.0. Phase two: LLM semantic analysis catches what AST can't — stale comments, misleading docs, naming contradictions, implicit contracts. Works on any language. Together you get AST speed and certainty plus LLM comprehension and&nbsp;coverage.</p>
     </div>
   </div>
 
@@ -675,17 +1429,17 @@
     <div class="step reveal">
       <div class="step-number">1</div>
       <h3>Audit</h3>
-      <p>Shadow documentation is generated for every source file — a cited, factual account of what the code actually does. Existing docs are checked against this ground truth.</p>
+      <p>Shadow documentation is generated for every source file. AST plugins extract provable facts — dead symbols, unused params, import graphs. Existing docs are validated against this ground truth.</p>
     </div>
     <div class="step reveal">
       <div class="step-number">2</div>
       <h3>Measure</h3>
-      <p>A scorecard quantifies what it finds: documentation coverage, accuracy errors, junk code fraction, stale content. Numbers, not opinions.</p>
+      <p>A scorecard quantifies what it finds: documentation coverage, accuracy errors, junk fraction, aggregate health. An observatory bundle exports everything for downstream tools and visualization.</p>
     </div>
     <div class="step reveal">
       <div class="step-number">3</div>
       <h3>Clean</h3>
-      <p>Structured findings feed directly into your coding agent's workflow. osojicode diagnoses, your agent fixes. Run it again until clean.</p>
+      <p>Bundled agent skills — <code>/osoji-sweep</code> and <code>/osoji-triage</code> — hand findings directly to Claude Code or other agents. <code>osoji push</code> sends results to Teams for trending across commits.</p>
     </div>
   </div>
 </section>
@@ -698,42 +1452,77 @@
       <p>Every audit produces a scorecard. Track your project's health over time. Know exactly what to fix and measure the impact of fixing it.</p>
     </div>
     <div class="scorecard reveal">
-      <div class="scorecard-header">Audit scorecard — mcp-debugger</div>
+      <div class="scorecard-header">Audit scorecard &mdash; osoji</div>
       <div class="scorecard-row">
         <span class="label">Documentation coverage</span>
-        <span class="value good">81%</span>
+        <span class="value good">71.8%</span>
       </div>
       <div class="scorecard-row">
-        <span class="label">Accuracy errors / live doc</span>
-        <span class="value warn">0.07</span>
+        <span class="label">Aggregate health</span>
+        <span class="value good">76.3%</span>
       </div>
       <div class="scorecard-row">
-        <span class="label">Junk code fraction</span>
-        <span class="value warn">1.2%</span>
+        <span class="label">Errors</span>
+        <span class="value warn">14</span>
+      </div>
+      <div class="scorecard-row">
+        <span class="label">Warnings</span>
+        <span class="value warn">94</span>
       </div>
       <div class="scorecard-divider"></div>
       <div class="scorecard-row">
         <span class="label">Dead symbols</span>
-        <span class="value">60</span>
+        <span class="value">39</span>
+      </div>
+      <div class="scorecard-row">
+        <span class="label">Dead code blocks</span>
+        <span class="value">15</span>
+      </div>
+      <div class="scorecard-row">
+        <span class="label">Dead parameters</span>
+        <span class="value">7</span>
       </div>
       <div class="scorecard-row">
         <span class="label">Stale comments</span>
-        <span class="value">11</span>
+        <span class="value">7</span>
       </div>
       <div class="scorecard-row">
-        <span class="label">Dead documentation</span>
-        <span class="value">3</span>
-      </div>
-      <div class="scorecard-row">
-        <span class="label">Unactuated config fields</span>
-        <span class="value">9</span>
+        <span class="label">Misleading docstrings</span>
+        <span class="value">7</span>
       </div>
       <div class="scorecard-divider"></div>
       <div class="scorecard-row">
         <span class="label">Total junk lines</span>
-        <span class="value warn">1,086 across 32 files</span>
+        <span class="value warn">270 across 39 files</span>
       </div>
     </div>
+  </div>
+</section>
+
+<!-- DEMO — SEE IT WORK -->
+<section class="demo" id="demo">
+  <div class="section-label reveal">See it work</div>
+  <h2 class="demo-headline reveal">A real audit of osoji's own codebase. Click any file to see what it found.</h2>
+  <p class="demo-intro reveal">Each node is a file. Color encodes health — dark is clean, amber is degraded, coral is at risk. Rings show compression ratio and junk fraction. Explore the graph, then drill into the details.</p>
+
+  <div class="demo-graph-wrap reveal" id="demoGraphWrap">
+    <svg id="demoGraph"></svg>
+    <div class="demo-loading" id="demoLoading">Loading observatory data&hellip;</div>
+    <div class="demo-tooltip" id="demoTooltip"></div>
+    <div class="demo-detail" id="demoDetail">
+      <button class="demo-detail-close" id="demoDetailClose">&times;</button>
+      <div id="demoDetailContent"></div>
+    </div>
+    <div class="demo-legend" id="demoLegend">
+      <div class="demo-legend-item"><div class="demo-legend-swatch" id="legendClean"></div>Clean</div>
+      <div class="demo-legend-item"><div class="demo-legend-swatch" id="legendAmber"></div>Degraded</div>
+      <div class="demo-legend-item"><div class="demo-legend-swatch" id="legendCoral"></div>At risk</div>
+      <div class="demo-legend-item"><div class="demo-legend-swatch" id="legendNoData"></div>No data</div>
+    </div>
+  </div>
+
+  <div class="demo-fallback">
+    <p>The interactive observatory visualization works best on wider screens.<br>Visit on a desktop browser to explore the force-directed graph.</p>
   </div>
 </section>
 
@@ -761,13 +1550,57 @@
   </div>
 </section>
 
+<!-- TEAMS -->
+<section class="teams" id="teams">
+  <div class="teams-inner">
+    <div class="section-label reveal">Teams</div>
+    <div class="teams-content">
+      <div class="teams-text reveal">
+        <h2>Track hygiene over&nbsp;time</h2>
+        <p>osoji audits a point in time. Teams answers the question the static report can't: is this codebase getting better or worse?</p>
+        <ul class="teams-features">
+          <li>Push audit results from CI or local with <code>osoji push</code></li>
+          <li>Multi-project dashboard with health trending over time</li>
+          <li>Interactive observatory visualization synced to audit history</li>
+          <li>Team-based access control and org management</li>
+          <li>Watch junk fraction, coverage, and accuracy change across commits</li>
+        </ul>
+        <div class="teams-cta-row">
+          <a href="https://teams.osojicode.ai" class="btn-primary">Sign in to Teams &rarr;</a>
+          <a href="https://github.com/osojicode/osoji-teams" class="btn-ghost">Read the docs &rarr;</a>
+        </div>
+      </div>
+      <div class="teams-sparkline reveal">
+        <div class="sparkline-header">Aggregate health</div>
+        <div class="sparkline-value">76.3%</div>
+        <svg class="sparkline-chart" viewBox="0 0 300 100" preserveAspectRatio="none">
+          <line class="grid-line" x1="0" y1="25" x2="300" y2="25"/>
+          <line class="grid-line" x1="0" y1="50" x2="300" y2="50"/>
+          <line class="grid-line" x1="0" y1="75" x2="300" y2="75"/>
+          <polygon class="trend-area" points="0,80 50,72 100,65 150,58 200,48 250,38 300,28 300,100 0,100"/>
+          <polyline class="trend-line" points="0,80 50,72 100,65 150,58 200,48 250,38 300,28"/>
+          <circle class="data-point" cx="0" cy="80" r="3"/>
+          <circle class="data-point" cx="50" cy="72" r="3"/>
+          <circle class="data-point" cx="100" cy="65" r="3"/>
+          <circle class="data-point" cx="150" cy="58" r="3"/>
+          <circle class="data-point" cx="200" cy="48" r="3"/>
+          <circle class="data-point" cx="250" cy="38" r="3"/>
+          <circle class="data-point" cx="300" cy="28" r="3"/>
+          <text class="axis-label" x="0" y="96">Mar 10</text>
+          <text class="axis-label" x="130" y="96">Mar 17</text>
+          <text class="axis-label" x="264" y="96">Mar 24</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- PRACTICE -->
 <section class="practice">
   <div class="practice-inner">
     <div class="practice-text reveal">
       <h2>Run it like you run your&nbsp;tests</h2>
-      <p>osojicode fits into the workflow you already have. CLI for local use, git hooks for ongoing maintenance, CI integration for teams.</p>
-      <p>The mess doesn't come back if you don't let it.</p>
+      <p>CLI for local use. <code>osoji push</code> for team visibility. Agent skills for automated cleanup. Git hooks for ongoing maintenance. The mess doesn't come back if you don't let it.</p>
     </div>
     <div class="terminal reveal">
       <div class="terminal-bar">
@@ -776,26 +1609,22 @@
         <div class="terminal-dot"></div>
       </div>
       <div class="terminal-body">
-        <div class="terminal-line"><span class="comment"># Full audit of the project</span></div>
-        <div class="terminal-line"><span class="prompt">$ </span><span class="cmd">osoji audit</span></div>
+        <div class="terminal-line"><span class="prompt">$ </span><span class="cmd">pip install osojicode</span></div>
         <div class="terminal-blank"></div>
-        <div class="terminal-line"><span class="output">Generating shadow docs...</span></div>
-        <div class="terminal-line"><span class="output">Analyzing 437 source files</span></div>
-        <div class="terminal-line"><span class="output">Checking documentation accuracy</span></div>
-        <div class="terminal-line"><span class="output">Detecting junk code</span></div>
+        <div class="terminal-line"><span class="prompt">$ </span><span class="cmd">osoji audit .</span></div>
         <div class="terminal-blank"></div>
-        <div class="terminal-line"><span class="ok-text">✓</span><span class="output"> Coverage: 81%</span></div>
-        <div class="terminal-line"><span class="warn-text">⚠</span><span class="output"> Junk code: 1,086 lines in 32 files</span></div>
-        <div class="terminal-line"><span class="warn-text">⚠</span><span class="output"> 9 errors, 171 warnings</span></div>
+        <div class="terminal-line"><span class="output">Generating shadow docs for 109 files...</span></div>
+        <div class="terminal-line"><span class="output">Running AST plugins: </span><span class="accent-text">python</span><span class="output">, </span><span class="accent-text">typescript</span></div>
+        <div class="terminal-line"><span class="output">Semantic analysis across 10 directories</span></div>
+        <div class="terminal-line"><span class="output">Validating documentation accuracy</span></div>
         <div class="terminal-blank"></div>
-        <div class="terminal-line"><span class="output">Report: .osoji/audit-report.md</span></div>
+        <div class="terminal-line"><span class="ok-text">&#10003;</span><span class="output"> Coverage: 71.8%</span></div>
+        <div class="terminal-line"><span class="ok-text">&#10003;</span><span class="output"> Health: 76.3%</span></div>
+        <div class="terminal-line"><span class="warn-text">&#9888;</span><span class="output"> 14 errors, 94 warnings</span></div>
+        <div class="terminal-line"><span class="warn-text">&#9888;</span><span class="output"> Junk: 270 lines in 39 files</span></div>
         <div class="terminal-blank"></div>
-        <div class="terminal-line"><span class="comment"># Feed findings to your agent</span></div>
-        <div class="terminal-line"><span class="prompt">$ </span><span class="cmd">osoji audit --findings | claude-code</span></div>
-        <div class="terminal-blank"></div>
-        <div class="terminal-line"><span class="comment"># Check again after cleanup</span></div>
-        <div class="terminal-line"><span class="prompt">$ </span><span class="cmd">osoji audit</span></div>
-        <div class="terminal-line"><span class="ok-text">✓</span><span class="output"> All checks passed</span></div>
+        <div class="terminal-line"><span class="prompt">$ </span><span class="cmd">osoji push</span></div>
+        <div class="terminal-line"><span class="ok-text">&#10003;</span><span class="output"> Pushed to </span><span class="accent-text">teams.osojicode.ai/osoji</span></div>
       </div>
     </div>
   </div>
@@ -804,39 +1633,643 @@
 <!-- FINAL CTA -->
 <section class="final-cta">
   <h2 class="reveal">Eliminate the cruft.<br>Reclaim the reasoning.</h2>
-  <p class="reveal">osojicode is open source and runs locally. Your code stays on your machine.</p>
-  <a href="https://github.com/osojicode" class="btn-primary reveal">Get started</a>
+  <p class="reveal">Open source. Runs locally. BYOK &mdash; you pay your LLM provider directly.</p>
+  <div class="final-cta-row reveal">
+    <button class="copy-snippet" data-copy="pip install osojicode">pip install osojicode</button>
+    <a href="https://github.com/osojicode/osoji" class="btn-ghost" target="_blank" rel="noopener">View on GitHub &rarr;</a>
+  </div>
 </section>
 
 <!-- FOOTER -->
 <footer>
   <div class="footer-mark">osojicode</div>
   <div class="footer-links">
-    <a href="https://github.com/osojicode">GitHub</a>
-    <a href="https://osojicode.dev/docs">Docs</a>
-    <a href="https://osojicode.dev/blog">Blog</a>
+    <a href="https://github.com/osojicode/osoji" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://teams.osojicode.ai" target="_blank" rel="noopener">Teams</a>
+    <a href="https://pypi.org/project/osojicode/" target="_blank" rel="noopener">PyPI</a>
+    <a href="https://www.npmjs.com/package/@osojicode/brand" target="_blank" rel="noopener">npm</a>
   </div>
 </footer>
 
+<!-- D3 from CDN — deferred so it doesn't block first paint -->
+<script src="https://d3js.org/d3.v7.min.js" defer></script>
+
 <script>
-  // Nav scroll effect
+  // ================================================================
+  // THEME
+  // ================================================================
+  const themeToggle = document.getElementById('themeToggle');
+  const html = document.documentElement;
+
+  const saved = localStorage.getItem('osoji-theme');
+  if (saved) html.setAttribute('data-theme', saved);
+  else if (window.matchMedia('(prefers-color-scheme: dark)').matches) html.setAttribute('data-theme', 'dark');
+
+  themeToggle.addEventListener('click', () => {
+    const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('osoji-theme', next);
+    if (typeof vizUpdateColors === 'function') vizUpdateColors();
+  });
+
+  // ================================================================
+  // NAV SCROLL
+  // ================================================================
   const nav = document.getElementById('nav');
   window.addEventListener('scroll', () => {
     nav.classList.toggle('scrolled', window.scrollY > 40);
-  });
+  }, { passive: true });
 
-  // Reveal on scroll
+  // ================================================================
+  // REVEAL ON SCROLL
+  // ================================================================
   const reveals = document.querySelectorAll('.reveal');
-  const observer = new IntersectionObserver((entries) => {
+  const revealObserver = new IntersectionObserver((entries) => {
     entries.forEach((entry, i) => {
       if (entry.isIntersecting) {
         setTimeout(() => entry.target.classList.add('visible'), i * 80);
-        observer.unobserve(entry.target);
+        revealObserver.unobserve(entry.target);
       }
     });
   }, { threshold: 0.15 });
+  reveals.forEach(el => revealObserver.observe(el));
 
-  reveals.forEach(el => observer.observe(el));
+  // ================================================================
+  // COPY TO CLIPBOARD
+  // ================================================================
+  document.querySelectorAll('.copy-snippet').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const text = btn.dataset.copy || btn.textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        btn.classList.add('copied');
+        setTimeout(() => btn.classList.remove('copied'), 1500);
+      });
+    });
+  });
+
+  // ================================================================
+  // D3 OBSERVATORY VISUALIZATION
+  // ================================================================
+
+  // Start fetching the bundle immediately (background)
+  let bundleData = null;
+  let demoVisible = false;
+  let graphReady = false;
+
+  const bundleFetch = fetch('demo-bundle.json')
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      bundleData = data;
+      if (demoVisible && !graphReady) tryInitGraph();
+    })
+    .catch(() => {
+      const el = document.getElementById('demoLoading');
+      if (el) el.textContent = 'Could not load observatory data.';
+    });
+
+  // Observe the demo section
+  const demoWrap = document.getElementById('demoGraphWrap');
+  if (demoWrap) {
+    const demoObserver = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        demoVisible = true;
+        if (bundleData && !graphReady) tryInitGraph();
+        demoObserver.disconnect();
+      }
+    }, { threshold: 0.1 });
+    demoObserver.observe(demoWrap);
+  }
+
+  function tryInitGraph() {
+    if (graphReady || !bundleData || typeof d3 === 'undefined') {
+      // D3 not loaded yet — wait for it
+      if (!graphReady && bundleData && typeof d3 === 'undefined') {
+        setTimeout(tryInitGraph, 100);
+      }
+      return;
+    }
+    graphReady = true;
+    initDemoGraph(bundleData);
+  }
+
+  // ---- Helpers ----
+
+  function getCSSVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  let VIZ_HEALTHY, VIZ_AMBER, VIZ_CORAL, VIZ_NO_DATA, VIZ_LINK, VIZ_DIR_STROKE, VIZ_ARC_COMP, VIZ_ARC_JUNK;
+
+  function vizReadColors() {
+    VIZ_HEALTHY = getCSSVar('--viz-healthy') || getCSSVar('--text-1');
+    VIZ_AMBER = getCSSVar('--viz-amber') || '#c9a06e';
+    VIZ_CORAL = getCSSVar('--viz-coral') || getCSSVar('--accent');
+    VIZ_NO_DATA = getCSSVar('--viz-no-data') || getCSSVar('--text-muted');
+    VIZ_LINK = getCSSVar('--viz-link-stroke') || getCSSVar('--border-default');
+    VIZ_DIR_STROKE = getCSSVar('--viz-dir-stroke') || getCSSVar('--text-muted');
+    VIZ_ARC_COMP = getCSSVar('--viz-arc-compression') || getCSSVar('--text-3');
+    VIZ_ARC_JUNK = getCSSVar('--viz-arc-junk') || '#c9a06e';
+  }
+
+  function healthColor(h) {
+    if (h == null) return VIZ_NO_DATA;
+    if (h > 0.8) return VIZ_HEALTHY;
+    if (h > 0.5) return VIZ_AMBER;
+    return VIZ_CORAL;
+  }
+
+  function healthLabel(h) {
+    if (h == null) return 'no data';
+    if (h > 0.8) return 'clean';
+    if (h > 0.5) return 'degraded';
+    return 'at-risk';
+  }
+
+  function nodeRadius(d) {
+    if (d.type === 'directory') return 10;
+    return Math.max(4, Math.sqrt(d._size || 1) * 2.5);
+  }
+
+  function nodeExtent(d) {
+    if (d.type === 'directory') return 10;
+    const r = d._radius;
+    const n = d._arcs ? d._arcs.length : 0;
+    if (n === 0 && !d._hasErrors) return r;
+    const err = d._hasErrors ? 10 : 0;
+    const w = 3, gap = 2;
+    if (n === 0) return r + err;
+    return r + 4 + err + (n - 1) * (w + gap) + w / 2;
+  }
+
+  function arcPath(cx, cy, radius, sa, ea) {
+    const s = { x: cx + radius * Math.sin(sa), y: cy - radius * Math.cos(sa) };
+    const e = { x: cx + radius * Math.sin(ea), y: cy - radius * Math.cos(ea) };
+    const la = ea - sa > Math.PI ? 1 : 0;
+    return `M ${s.x} ${s.y} A ${radius} ${radius} 0 ${la} 1 ${e.x} ${e.y}`;
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // ---- Data transformation ----
+
+  function flattenTree(treeNode) {
+    const nodes = [], links = [];
+    let id = 0;
+
+    function walk(node, parentId) {
+      const idx = id++;
+      const isFile = node.node_type === 'file';
+      const d = { _id: idx, type: isFile ? 'file' : 'directory', name: node.name, path: node.path || '' };
+
+      if (isFile) {
+        const m = node.metrics || {};
+        d._size = node.lines || 0;
+        d._health = m.health_score != null ? m.health_score : null;
+        d._hasErrors = (m.error_count > 0) || (node.audit_findings || []).some(f => f.severity === 'error');
+        d._radius = nodeRadius(d);
+        d._arcs = [];
+        const st = node.tokens && node.tokens.source_tokens;
+        const ht = node.tokens && node.tokens.shadow_tokens;
+        if (typeof st === 'number' && st > 0 && typeof ht === 'number') {
+          d._arcs.push({ label: 'Compression', value: Math.max(0, Math.min(1, ht / st)), color: VIZ_ARC_COMP });
+        }
+        const jf = m.junk_fraction || 0;
+        if (jf > 0) {
+          d._arcs.push({ label: 'Junk', value: jf, color: VIZ_ARC_JUNK });
+        }
+        d._extent = nodeExtent(d);
+        d._purpose = (node.signature && node.signature.purpose) || '';
+        d._topics = (node.signature && node.signature.topics) || [];
+        d._findings = node.audit_findings || [];
+        d._symbols = node.symbols || {};
+        d._shadow = node.shadow || {};
+        d._tokens = node.tokens || {};
+        d._metrics = m;
+        d._role = (node.symbols && node.symbols.file_role) || '';
+      } else {
+        d._childCount = (node.children || []).length;
+        d._radius = 10;
+        d._extent = 10;
+        d._shadow = node.shadow || {};
+      }
+
+      nodes.push(d);
+      if (parentId !== null) links.push({ source: parentId, target: idx });
+
+      if (!isFile && node.children) {
+        const sorted = [...node.children].sort((a, b) => {
+          const ad = a.node_type === 'directory' ? 0 : 1;
+          const bd = b.node_type === 'directory' ? 0 : 1;
+          if (ad !== bd) return ad - bd;
+          return a.name.localeCompare(b.name);
+        });
+        for (const c of sorted) walk(c, idx);
+      }
+      return d;
+    }
+
+    const root = walk(treeNode, null);
+    return { nodes, links, root };
+  }
+
+  // ---- Radial pre-layout ----
+
+  function applyRadialLayout(nodes, links, root, spacing) {
+    const childrenOf = new Map();
+    for (const l of links) {
+      const pid = typeof l.source === 'object' ? l.source._id : l.source;
+      const cid = typeof l.target === 'object' ? l.target._id : l.target;
+      if (!childrenOf.has(pid)) childrenOf.set(pid, []);
+      childrenOf.get(pid).push(nodes[cid]);
+    }
+
+    function countWeight(n) {
+      const ch = childrenOf.get(n._id);
+      if (!ch || ch.length === 0) { n._weight = 1; return 1; }
+      let t = 0;
+      for (const c of ch) t += countWeight(c);
+      n._weight = t;
+      return t;
+    }
+    countWeight(root);
+
+    function layout(n, depth, sa, ea) {
+      const mid = (sa + ea) / 2;
+      const r = depth * spacing;
+      n.x = r * Math.cos(mid);
+      n.y = r * Math.sin(mid);
+      const ch = childrenOf.get(n._id);
+      if (!ch || ch.length === 0) return;
+      const tw = n._weight || 1;
+      let cursor = sa;
+      for (const c of ch) {
+        const sweep = ((c._weight || 1) / tw) * (ea - sa);
+        layout(c, depth + 1, cursor, cursor + sweep);
+        cursor += sweep;
+      }
+    }
+    layout(root, 0, 0, Math.PI * 2);
+  }
+
+  // ---- Main graph init ----
+
+  let vizSimulation = null;
+  let vizNodeSelection = null;
+  let vizLinkSelection = null;
+  let vizFileLabels = null;
+
+  function initDemoGraph(data) {
+    document.getElementById('demoLoading').classList.add('hidden');
+    vizReadColors();
+    updateLegendColors();
+
+    const tree = data.tree;
+    if (!tree || !tree.children || tree.children.length === 0) return;
+
+    const { nodes, links, root } = flattenTree(tree);
+    applyRadialLayout(nodes, links, root, 150);
+
+    const container = document.getElementById('demoGraphWrap');
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+
+    const svg = d3.select('#demoGraph');
+    const g = svg.append('g');
+
+    // Zoom
+    const zoom = d3.zoom()
+      .scaleExtent([0.1, 6])
+      .on('zoom', (event) => g.attr('transform', event.transform));
+    svg.call(zoom);
+    svg.call(zoom.transform, d3.zoomIdentity.translate(width / 2, height / 2).scale(0.8));
+
+    // Click background to close
+    svg.on('click', (event) => {
+      if (event.target === svg.node() || event.target.tagName === 'svg') closeDetail();
+    });
+
+    // Force simulation
+    const simulation = d3.forceSimulation(nodes)
+      .force('link', d3.forceLink(links).id((d, i) => i)
+        .distance(d => {
+          const src = d.source, tgt = d.target;
+          if (src.type === 'directory' && tgt.type === 'directory') return 300;
+          const parent = src.type === 'directory' ? src : tgt;
+          const child = src.type === 'directory' ? tgt : src;
+          const cc = parent._childCount || 0;
+          const extra = child.type === 'file' ? (child._extent || 0) - (child._radius || 0) : 0;
+          return 120 + cc * 10 + extra;
+        })
+        .strength(d => {
+          const src = d.source, tgt = d.target;
+          if (src.type === 'directory' && tgt.type === 'directory') return 0.4;
+          const parent = src.type === 'directory' ? src : tgt;
+          return (parent._childCount || 0) > 10 ? 0.3 : 0.5;
+        }))
+      .force('charge', d3.forceManyBody().strength(d => d.type === 'directory' ? -300 : -50))
+      .force('center', d3.forceCenter(0, 0).strength(0.03))
+      .force('collide', d3.forceCollide(d => (d._extent || d._radius || 10) + 4).strength(0))
+      .alphaDecay(0.01)
+      .velocityDecay(0.3);
+
+    vizSimulation = simulation;
+
+    // Phase collision in
+    simulation.on('tick.collide', () => {
+      const a = simulation.alpha();
+      if (a < 0.4) simulation.force('collide').strength((1 - a / 0.4) * 0.6);
+    });
+
+    // Links
+    const link = g.append('g').selectAll('line').data(links).join('line').attr('class', 'link');
+    vizLinkSelection = link;
+
+    // Nodes
+    const node = g.append('g').selectAll('g').data(nodes).join('g')
+      .attr('class', d => d.type === 'directory' ? 'node-dir' : 'node-file');
+    vizNodeSelection = node;
+
+    // File circles
+    node.filter(d => d.type === 'file')
+      .append('circle')
+      .attr('r', d => d._radius)
+      .attr('fill', d => healthColor(d._health));
+
+    // Error rings
+    node.filter(d => d.type === 'file' && d._hasErrors)
+      .append('circle')
+      .attr('class', 'error-ring')
+      .attr('r', d => d._radius + 5)
+      .attr('fill', 'none')
+      .attr('stroke', VIZ_CORAL)
+      .attr('stroke-width', 3)
+      .attr('stroke-opacity', 1);
+
+    // Directory circles
+    node.filter(d => d.type === 'directory')
+      .append('circle')
+      .attr('r', 10);
+
+    // Arcs
+    node.filter(d => d.type === 'file' && d._arcs && d._arcs.length > 0)
+      .each(function(d) {
+        const el = d3.select(this);
+        const r = d._radius;
+        const err = d._hasErrors ? 10 : 0;
+        const w = 3, gap = 2;
+        d._arcs.forEach((arc, i) => {
+          const ar = r + 4 + err + i * (w + gap);
+          const ea = arc.value * Math.PI * 2;
+          if (ea < 0.02) return;
+          el.append('path')
+            .attr('class', 'arc-ring')
+            .attr('d', arcPath(0, 0, ar, 0, Math.min(ea, Math.PI * 1.999)))
+            .attr('stroke', arc.color)
+            .attr('stroke-width', w);
+        });
+      });
+
+    // Labels — directories always
+    node.filter(d => d.type === 'directory')
+      .append('text')
+      .attr('class', 'node-label')
+      .attr('dy', 22)
+      .text(d => d.name);
+
+    // File labels — fade in at zoom > 1.5
+    const fLabels = node.filter(d => d.type === 'file')
+      .append('text')
+      .attr('class', 'node-label')
+      .attr('dy', d => (d._extent || d._radius) + 8)
+      .text(d => d.name)
+      .style('opacity', 0);
+    vizFileLabels = fLabels;
+
+    zoom.on('zoom.labels', (event) => {
+      const k = event.transform.k;
+      fLabels.style('opacity', k > 1.5 ? Math.min(1, (k - 1.5) * 2) : 0);
+    });
+
+    // Drag
+    const drag = d3.drag()
+      .on('start', (event, d) => {
+        if (!event.active) simulation.alphaTarget(0.1).restart();
+        d.fx = d.x; d.fy = d.y;
+      })
+      .on('drag', (event, d) => { d.fx = event.x; d.fy = event.y; })
+      .on('end', (event, d) => {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null; d.fy = null;
+      });
+    node.call(drag);
+
+    // Tooltip
+    const tooltip = document.getElementById('demoTooltip');
+
+    node.on('mouseenter', (event, d) => {
+      link.classed('highlighted', l =>
+        (typeof l.source === 'object' ? l.source._id : l.source) === d._id ||
+        (typeof l.target === 'object' ? l.target._id : l.target) === d._id);
+
+      let h = '';
+      if (d.type === 'file') {
+        h = `<div class="tooltip-name">${escapeHtml(d.name)}</div>`;
+        h += `<div class="tooltip-row"><span class="tooltip-label">Lines</span><span class="tooltip-value">${d._size}</span></div>`;
+        h += `<div class="tooltip-row"><span class="tooltip-label">Health</span><span class="tooltip-value">${d._health != null ? Math.round(d._health * 100) + '%' : '\u2014'}</span></div>`;
+        if (d._arcs) d._arcs.forEach(a => {
+          h += `<div class="tooltip-row"><span class="tooltip-label">${escapeHtml(a.label)}</span><span class="tooltip-value">${Math.round(a.value * 100)}%</span></div>`;
+        });
+        if (d._role) h += `<div class="tooltip-badges"><span class="badge">${escapeHtml(d._role)}</span></div>`;
+      } else {
+        h = `<div class="tooltip-name">${escapeHtml(d.name)}/</div>`;
+        h += `<div class="tooltip-row"><span class="tooltip-label">Children</span><span class="tooltip-value">${d._childCount || 0}</span></div>`;
+      }
+      tooltip.innerHTML = h;
+      tooltip.classList.add('visible');
+    })
+    .on('mousemove', (event) => {
+      const rect = container.getBoundingClientRect();
+      let x = event.clientX - rect.left + 14;
+      let y = event.clientY - rect.top - 10;
+      if (x + 260 > rect.width) x = event.clientX - rect.left - 270;
+      tooltip.style.left = x + 'px';
+      tooltip.style.top = y + 'px';
+    })
+    .on('mouseleave', () => {
+      tooltip.classList.remove('visible');
+      link.classed('highlighted', false);
+    });
+
+    // Click — detail panel
+    node.on('click', (event, d) => {
+      event.stopPropagation();
+      let h = '';
+      h += `<div class="detail-title">${escapeHtml(d.name)}</div>`;
+      h += `<div class="detail-path">${escapeHtml(d.path)}</div>`;
+
+      if (d.type === 'file') {
+        // Health bar
+        if (d._health != null) {
+          h += `<div class="detail-health-bar"><div class="detail-health-fill" style="width:${d._health * 100}%;background:${healthColor(d._health)}"></div></div>`;
+        } else {
+          h += `<div class="detail-health-bar"><div class="detail-health-fill" style="width:100%;background:${VIZ_NO_DATA};opacity:0.4"></div></div>`;
+        }
+
+        // Meta line
+        h += `<div class="detail-meta"><span>${healthLabel(d._health)}</span><span>${d._size} lines</span>`;
+        if (d._role) h += `<span class="badge">${escapeHtml(d._role)}</span>`;
+        const origin = (d._findings && d._findings.length > 0 && d._findings[0].origin)
+          ? d._findings[0].origin.source : null;
+        h += '</div>';
+
+        // Arcs
+        if (d._arcs && d._arcs.length > 0) {
+          h += '<div class="detail-arcs">';
+          d._arcs.forEach(a => {
+            h += `<div class="detail-arc-item"><div class="detail-arc-swatch" style="background:${a.color}"></div>${escapeHtml(a.label)}: ${Math.round(a.value * 100)}%</div>`;
+          });
+          h += '</div>';
+        }
+
+        // Purpose
+        if (d._purpose) {
+          h += '<div class="detail-section"><h4>Purpose</h4>';
+          h += `<p class="detail-purpose">${escapeHtml(d._purpose)}</p></div>`;
+        }
+
+        // Details
+        h += '<div class="detail-section"><h4>Details</h4>';
+        if (d._shadow && d._shadow.exists !== undefined) {
+          h += `<div class="detail-kv"><span class="key">Shadow doc</span><span class="val">${d._shadow.exists ? (d._shadow.is_stale ? '\u26a0 Stale' : '\u2713 Current') : 'Missing'}</span></div>`;
+        }
+        if (d._symbols && d._symbols.count != null) {
+          h += `<div class="detail-kv"><span class="key">Symbols</span><span class="val">${d._symbols.count} (${d._symbols.public_count || 0} public)</span></div>`;
+        }
+        if (d._metrics) {
+          if (d._metrics.findings_count) h += `<div class="detail-kv"><span class="key">Shadow findings</span><span class="val">${d._metrics.findings_count}</span></div>`;
+          if (d._metrics.audit_findings_count) h += `<div class="detail-kv"><span class="key">Audit findings</span><span class="val">${d._metrics.audit_findings_count}</span></div>`;
+        }
+        if (d._topics && d._topics.length > 0) {
+          h += `<div class="detail-kv"><span class="key">Topics</span><span class="val" style="text-align:right;max-width:200px">${escapeHtml(d._topics.join(', '))}</span></div>`;
+        }
+        h += '</div>';
+
+        // Findings
+        if (d._findings && d._findings.length > 0) {
+          h += `<div class="detail-section"><h4>Findings (${d._findings.length})</h4>`;
+          d._findings.forEach(f => {
+            h += '<div class="finding-card">';
+            h += '<div class="finding-header">';
+            h += `<span class="finding-severity ${f.severity || ''}">${escapeHtml(f.severity || 'info')}</span>`;
+            if (f.category) h += `<span class="finding-category">${escapeHtml(f.category)}</span>`;
+            if (f.origin && f.origin.source) h += `<span class="finding-origin">${escapeHtml(f.origin.source)}</span>`;
+            if (f.line_start != null) {
+              const lines = f.line_end && f.line_end !== f.line_start ? `L${f.line_start}\u2013${f.line_end}` : `L${f.line_start}`;
+              h += `<span class="finding-category">${lines}</span>`;
+            }
+            h += '</div>';
+            if (f.message) h += `<div class="finding-message">${escapeHtml(f.message)}</div>`;
+            if (f.remediation) h += `<div class="finding-remediation">${escapeHtml(f.remediation)}</div>`;
+            h += '</div>';
+          });
+          h += '</div>';
+        }
+
+        // Shadow doc preview
+        if (d._shadow && d._shadow.content) {
+          const preview = d._shadow.content.length > 2000 ? d._shadow.content.slice(0, 2000) + '\n\n[truncated]' : d._shadow.content;
+          h += '<div class="detail-section"><h4>Shadow documentation</h4>';
+          h += `<div class="detail-preview">${escapeHtml(preview)}</div></div>`;
+        }
+
+      } else {
+        // Directory
+        h += '<div class="detail-section"><h4>Contents</h4>';
+        h += `<div class="detail-kv"><span class="key">Children</span><span class="val">${d._childCount || 0}</span></div>`;
+        h += '</div>';
+        if (d._shadow && d._shadow.content) {
+          const preview = d._shadow.content.length > 2000 ? d._shadow.content.slice(0, 2000) + '\n\n[truncated]' : d._shadow.content;
+          h += '<div class="detail-section"><h4>Shadow documentation</h4>';
+          h += `<div class="detail-preview">${escapeHtml(preview)}</div></div>`;
+        }
+      }
+
+      openDetail(h);
+    });
+
+    // Tick
+    simulation.on('tick', () => {
+      link
+        .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+        .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+      node.attr('transform', d => `translate(${d.x},${d.y})`);
+    });
+  }
+
+  // ---- Detail panel ----
+
+  function openDetail(html) {
+    document.getElementById('demoDetailContent').innerHTML = html;
+    document.getElementById('demoDetail').classList.add('open');
+  }
+
+  function closeDetail() {
+    document.getElementById('demoDetail').classList.remove('open');
+  }
+
+  document.getElementById('demoDetailClose').addEventListener('click', closeDetail);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDetail(); });
+
+  // ---- Theme recolor ----
+
+  function updateLegendColors() {
+    vizReadColors();
+    const cs = document.getElementById('legendClean');
+    if (cs) cs.style.background = VIZ_HEALTHY;
+    const ca = document.getElementById('legendAmber');
+    if (ca) ca.style.background = VIZ_AMBER;
+    const cc = document.getElementById('legendCoral');
+    if (cc) cc.style.background = VIZ_CORAL;
+    const cn = document.getElementById('legendNoData');
+    if (cn) cn.style.background = VIZ_NO_DATA;
+  }
+
+  function vizUpdateColors() {
+    vizReadColors();
+    updateLegendColors();
+    if (!vizNodeSelection) return;
+    // Recolor file circles
+    vizNodeSelection.filter(d => d.type === 'file')
+      .select('circle:first-of-type')
+      .attr('fill', d => healthColor(d._health));
+    // Recolor error rings
+    vizNodeSelection.filter(d => d.type === 'file' && d._hasErrors)
+      .select('.error-ring')
+      .attr('stroke', VIZ_CORAL);
+    // Recolor arcs
+    vizNodeSelection.selectAll('.arc-ring').each(function() {
+      // Arc colors are baked at creation — re-read from arc data
+      const parent = this.parentNode;
+      const d = d3.select(parent).datum();
+      if (d && d._arcs) {
+        const arcs = d3.select(parent).selectAll('.arc-ring');
+        arcs.each(function(_, i) {
+          if (d._arcs[i]) {
+            // Update color based on type
+            const c = d._arcs[i].label === 'Compression' ? VIZ_ARC_COMP : VIZ_ARC_JUNK;
+            d._arcs[i].color = c;
+            d3.select(this).attr('stroke', c);
+          }
+        });
+      }
+    });
+  }
+
+  // Init legend colors on load
+  requestAnimationFrame(updateLegendColors);
 </script>
 
 </body>
