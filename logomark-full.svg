@@ -1,0 +1,27 @@
+<svg viewBox="0 0 512 512" width="512" height="512" xmlns="http://www.w3.org/2000/svg">\n
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300&amp;display=swap');
+      .wordmark {
+        font-family: 'Cormorant Garamond', serif;
+        font-weight: 300;
+        letter-spacing: 0.04em;
+        fill: #2c2a26;
+        font-size: 160px;
+      }
+    </style>
+    <mask id="hanko-mask">
+      <rect width="512" height="512" fill="white" />
+      <circle cx="256" cy="256" r="144" fill="none" stroke="black" stroke-width="60" stroke-dasharray="678.584 226.194" />
+    </mask>
+    <g id="hanko-full">
+      <rect width="512" height="512" fill="#c4402f" mask="url(#hanko-mask)" />
+    </g>
+    <g id="hanko-dark">
+      <rect width="512" height="512" fill="#2c2a26" mask="url(#hanko-mask)" />
+    </g>
+    <g id="hanko-light">
+      <rect width="512" height="512" fill="#fafafa" mask="url(#hanko-mask)" />
+    </g>
+  </defs>
+\n<use href="#hanko-full" />\n</svg>
