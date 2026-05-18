@@ -86,6 +86,8 @@
     --success-muted: #e8f0e8;
     --warning: #c4402f;
     --warning-muted: #faf0ee;
+    --info: #5c7a8a;
+    --info-muted: #edf2f4;
 
     --shadow-sm: 0 1px 3px rgba(44, 42, 38, 0.04);
     --shadow-md: 0 4px 12px rgba(44, 42, 38, 0.06);
@@ -131,6 +133,8 @@
     --success-muted: #1e2a1e;
     --warning: #d4715e;
     --warning-muted: #2e2220;
+    --info: #7a9aaa;
+    --info-muted: #1e2428;
 
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
@@ -276,11 +280,20 @@
 
   .hero {
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    gap: var(--sp-16);
+    align-items: center;
     padding: var(--sp-32) var(--page-gutter) var(--sp-24);
-    max-width: 900px;
+    max-width: var(--page-max);
+    margin: 0 auto;
+  }
+
+  .hero-text { max-width: 600px; }
+
+  .hero-loop {
+    width: 100%;
+    aspect-ratio: 800 / 1180;
   }
 
   .hero-label {
@@ -614,6 +627,10 @@
   .demo-graph-wrap {
     position: relative;
     height: 600px;
+    width: calc(100vw - 2 * var(--page-gutter));
+    max-width: 1600px;
+    margin-left: calc(50% - 50vw + var(--page-gutter));
+    margin-right: calc(50% - 50vw + var(--page-gutter));
     background: var(--surface-3);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
@@ -626,6 +643,42 @@
     height: 100%;
     display: block;
   }
+
+  .demo-fullscreen {
+    position: absolute;
+    top: var(--sp-3);
+    right: var(--sp-3);
+    z-index: 10;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: var(--surface-overlay);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    color: var(--text-2);
+    cursor: pointer;
+    transition: color var(--dur-normal) var(--ease),
+                background var(--dur-normal) var(--ease),
+                border-color var(--dur-normal) var(--ease);
+  }
+  .demo-fullscreen:hover { color: var(--text-1); background: var(--surface-elevated); }
+  .demo-fullscreen:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .demo-graph-wrap:fullscreen {
+    width: 100vw;
+    height: 100vh;
+    max-width: none;
+    margin: 0;
+    border-radius: 0;
+    background: var(--surface-1);
+  }
+  .demo-graph-wrap:fullscreen svg { width: 100%; height: 100%; }
 
   .demo-loading {
     position: absolute;
@@ -1313,6 +1366,16 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
+  /* Respect OS-level reduced-motion preference */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
   .reveal {
     opacity: 0;
     transform: translateY(16px);
@@ -1330,7 +1393,12 @@
 
   @media (max-width: 900px) {
     :root { --page-gutter: 2rem; }
-    .hero { padding: 7rem var(--page-gutter) var(--sp-16); }
+    .hero {
+      padding: 7rem var(--page-gutter) var(--sp-16);
+      grid-template-columns: 1fr;
+      gap: var(--sp-12);
+    }
+    .hero-loop { max-width: 480px; margin: 0 auto; }
     .problem, .how, .why, .practice { padding: var(--sp-20) var(--page-gutter); }
     .scorecard-section, .teams { padding: var(--sp-20) var(--page-gutter); }
     .demo { padding: var(--sp-20) var(--page-gutter); }
@@ -1380,13 +1448,18 @@
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-label">AST-verified, LLM-native code hygiene</div>
-  <h1>The garbage collector<br>for your project.</h1>
-  <p>Coding agents ship fast but leave debris behind — dead code, stale comments, outdated docs. osojicode finds it all: deterministic AST analysis proves dead symbols unreachable with mathematical certainty, while LLM semantic reasoning catches stale docs, misleading comments, and naming contradictions across any language. Structured findings your agents can act on directly.</p>
-  <div class="hero-cta-row">
-    <button class="copy-snippet" data-copy="pip install osojicode">pip install osojicode</button>
-    <a href="#demo" class="btn-ghost">See it work &rarr;</a>
+  <div class="hero-text">
+    <div class="hero-label">AST-verified, LLM-native code hygiene</div>
+    <h1>The garbage collector<br>for your project.</h1>
+    <p>Coding agents ship fast but leave debris behind — dead code, stale comments, outdated docs. osojicode finds it all: deterministic AST analysis proves dead symbols unreachable with mathematical certainty, while LLM semantic reasoning catches stale docs, misleading comments, and naming contradictions across any language. Structured findings your agents can act on directly.</p>
+    <div class="hero-cta-row">
+      <button class="copy-snippet" data-copy="pip install osojicode">pip install osojicode</button>
+      <a href="#demo" class="btn-ghost">See it work &rarr;</a>
+    </div>
   </div>
+  <div class="hero-loop" id="hero-loop"
+       role="img"
+       aria-label="Animated demonstration: osojicode audits a TypeScript file, flags dead code and stale comments, then sweeps the file clean."></div>
 </section>
 
 <div class="divider"><div class="divider-line"></div></div>
@@ -1509,6 +1582,11 @@
   <p class="demo-intro reveal">Each node is a file. Color encodes health — dark is clean, amber is degraded, coral is at risk. Rings show compression ratio and junk fraction. Explore the graph, then drill into the details.</p>
 
   <div class="demo-graph-wrap reveal" id="demoGraphWrap">
+    <button class="demo-fullscreen" id="demoFullscreen" type="button" aria-label="Expand observatory to fullscreen">
+      <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4"/>
+      </svg>
+    </button>
     <svg id="demoGraph"></svg>
     <div class="demo-loading" id="demoLoading">Loading observatory data&hellip;</div>
     <div class="demo-tooltip" id="demoTooltip"></div>
@@ -1657,6 +1735,12 @@
 <!-- D3 from CDN — deferred so it doesn't block first paint -->
 <script src="https://d3js.org/d3.v7.min.js" defer></script>
 
+<!-- CleanupLoop (hero animation) — React + pre-transpiled component -->
+<script defer crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script defer crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script defer src="/CleanupLoop/codeData.js"></script>
+<script defer src="/CleanupLoop/CleanupLoop.js"></script>
+
 <script>
   // ================================================================
   // THEME
@@ -1710,6 +1794,22 @@
       });
     });
   });
+
+  // ================================================================
+  // OBSERVATORY FULLSCREEN TOGGLE
+  // ================================================================
+  const fsBtn = document.getElementById('demoFullscreen');
+  const fsWrap = document.getElementById('demoGraphWrap');
+  if (fsBtn && fsWrap) {
+    fsBtn.addEventListener('click', () => {
+      if (document.fullscreenElement === fsWrap) document.exitFullscreen();
+      else if (fsWrap.requestFullscreen) fsWrap.requestFullscreen();
+    });
+    document.addEventListener('fullscreenchange', () => {
+      // Kick the force simulation so the layout re-settles in the new size.
+      if (window.__demoSimulation) window.__demoSimulation.alpha(0.3).restart();
+    });
+  }
 
   // ================================================================
   // D3 OBSERVATORY VISUALIZATION
@@ -1954,8 +2054,8 @@
       if (event.target === svg.node() || event.target.tagName === 'svg') closeDetail();
     });
 
-    // Force simulation
-    const simulation = d3.forceSimulation(nodes)
+    // Force simulation (exposed on window so the fullscreen toggle can restart it)
+    const simulation = window.__demoSimulation = d3.forceSimulation(nodes)
       .force('link', d3.forceLink(links).id((d, i) => i)
         .distance(d => {
           const src = d.source, tgt = d.target;
@@ -2273,6 +2373,18 @@
 
   // Init legend colors on load
   requestAnimationFrame(updateLegendColors);
+
+  // ================================================================
+  // CLEANUP LOOP — mount once all deferred scripts have finished
+  // ================================================================
+  document.addEventListener('DOMContentLoaded', () => {
+    const host = document.getElementById('hero-loop');
+    if (host && window.React && window.ReactDOM && window.CleanupLoop) {
+      window.ReactDOM.createRoot(host).render(
+        window.React.createElement(window.CleanupLoop)
+      );
+    }
+  });
 </script>
 
 </body>
