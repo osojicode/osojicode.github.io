@@ -36,7 +36,7 @@
 // per-line metrics drive both the layout and the collapse animation,
 // so adjust them as a group if you re-tune.
 
-const CANVAS_W = 800;
+const CANVAS_W = 1024;
 const CANVAS_H = 1180;
 const LH = 36; // line height
 const FONT_PX = 22; // code font size
