@@ -829,6 +829,22 @@
 
   .demo-detail-close:hover { color: var(--text-1); }
 
+  .demo-detail-resize {
+    position: absolute;
+    left: -3px;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    z-index: 70;
+    background: transparent;
+    cursor: ew-resize;
+    touch-action: none;
+    transition: background var(--dur-normal) var(--ease);
+  }
+  .demo-detail-resize:hover { background: var(--border-strong); }
+  .demo-detail-resize.dragging { background: var(--accent); }
+  body.demo-detail-resizing { cursor: ew-resize; user-select: none; }
+
   .detail-title {
     font-family: var(--font-mono);
     font-size: 0.85rem;
@@ -1596,6 +1612,7 @@
       <div class="demo-loading" id="demoLoading">Loading observatory data&hellip;</div>
       <div class="demo-tooltip" id="demoTooltip"></div>
       <div class="demo-detail" id="demoDetail">
+        <div class="demo-detail-resize" id="demoDetailResize" role="separator" aria-orientation="vertical" aria-label="Resize detail panel"></div>
         <button class="demo-detail-close" id="demoDetailClose">&times;</button>
         <div id="demoDetailContent"></div>
       </div>
@@ -2331,6 +2348,47 @@
 
   document.getElementById('demoDetailClose').addEventListener('click', closeDetail);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDetail(); });
+
+  // Resizable detail panel — drag the left edge to widen/narrow.
+  (function setupDetailResize() {
+    const handle = document.getElementById('demoDetailResize');
+    const panel = document.getElementById('demoDetail');
+    const wrap = document.getElementById('demoGraphWrap');
+    if (!handle || !panel || !wrap) return;
+    const MIN_W = 240;
+    const STORAGE_KEY = 'osoji.detailWidth';
+    try {
+      const saved = parseInt(localStorage.getItem(STORAGE_KEY), 10);
+      if (saved && saved >= MIN_W) panel.style.width = saved + 'px';
+    } catch (_) { /* localStorage may be blocked */ }
+    let startX = 0, startW = 0, dragging = false;
+    handle.addEventListener('pointerdown', (e) => {
+      if (!panel.classList.contains('open')) return;
+      dragging = true;
+      startX = e.clientX;
+      startW = panel.getBoundingClientRect().width;
+      handle.setPointerCapture(e.pointerId);
+      handle.classList.add('dragging');
+      document.body.classList.add('demo-detail-resizing');
+      e.preventDefault();
+    });
+    handle.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const maxW = wrap.getBoundingClientRect().width - 80;
+      const next = Math.max(MIN_W, Math.min(maxW, startW + (startX - e.clientX)));
+      panel.style.width = next + 'px';
+    });
+    const end = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      try { handle.releasePointerCapture(e.pointerId); } catch (_) {}
+      handle.classList.remove('dragging');
+      document.body.classList.remove('demo-detail-resizing');
+      try { localStorage.setItem(STORAGE_KEY, parseInt(panel.style.width, 10)); } catch (_) {}
+    };
+    handle.addEventListener('pointerup', end);
+    handle.addEventListener('pointercancel', end);
+  })();
 
   // ---- Theme recolor ----
 
