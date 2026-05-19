@@ -625,12 +625,15 @@
     max-width: 600px;
   }
 
-  .demo-graph-wrap {
-    position: relative;
-    height: 600px;
+  .demo-graph-center {
     width: min(calc(100vw - 2 * var(--page-gutter)), 1600px);
     margin-left: 50%;
     transform: translateX(-50%);
+  }
+
+  .demo-graph-wrap {
+    position: relative;
+    height: 600px;
     background: var(--surface-3);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
@@ -675,7 +678,6 @@
     height: 100vh;
     max-width: none;
     margin: 0;
-    transform: none;
     border-radius: 0;
     background: var(--surface-1);
   }
@@ -1388,9 +1390,6 @@
     transform: translateY(0);
   }
 
-  /* Centering breakout composes with reveal — preserve translateX(-50%) */
-  .demo-graph-wrap.reveal { transform: translateX(-50%) translateY(16px); }
-  .demo-graph-wrap.reveal.visible { transform: translateX(-50%) translateY(0); }
 
   /* ============================================================
      RESPONSIVE
@@ -1415,7 +1414,7 @@
     .why-grid { grid-template-columns: 1fr; gap: var(--sp-8); }
     .practice-inner { grid-template-columns: 1fr; gap: var(--sp-12); }
     .teams-content { grid-template-columns: 1fr; gap: var(--sp-12); }
-    .demo-graph-wrap { display: none; }
+    .demo-graph-center { display: none; }
     .demo-fallback { display: block; }
     .final-cta-row { flex-direction: column; gap: var(--sp-4); }
   }
@@ -1586,24 +1585,26 @@
   <h2 class="demo-headline reveal">A real audit of osoji's own codebase. Click any file to see what it found.</h2>
   <p class="demo-intro reveal">Each node is a file. Color encodes health — dark is clean, amber is degraded, coral is at risk. Rings show compression ratio and junk fraction. Explore the graph, then drill into the details.</p>
 
-  <div class="demo-graph-wrap reveal" id="demoGraphWrap">
-    <button class="demo-fullscreen" id="demoFullscreen" type="button" aria-label="Expand observatory to fullscreen">
-      <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-        <path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4"/>
-      </svg>
-    </button>
-    <svg id="demoGraph"></svg>
-    <div class="demo-loading" id="demoLoading">Loading observatory data&hellip;</div>
-    <div class="demo-tooltip" id="demoTooltip"></div>
-    <div class="demo-detail" id="demoDetail">
-      <button class="demo-detail-close" id="demoDetailClose">&times;</button>
-      <div id="demoDetailContent"></div>
-    </div>
-    <div class="demo-legend" id="demoLegend">
-      <div class="demo-legend-item"><div class="demo-legend-swatch" id="legendClean"></div>Clean</div>
-      <div class="demo-legend-item"><div class="demo-legend-swatch" id="legendAmber"></div>Degraded</div>
-      <div class="demo-legend-item"><div class="demo-legend-swatch" id="legendCoral"></div>At risk</div>
-      <div class="demo-legend-item"><div class="demo-legend-swatch" id="legendNoData"></div>No data</div>
+  <div class="demo-graph-center">
+    <div class="demo-graph-wrap reveal" id="demoGraphWrap">
+      <button class="demo-fullscreen" id="demoFullscreen" type="button" aria-label="Expand observatory to fullscreen">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4"/>
+        </svg>
+      </button>
+      <svg id="demoGraph"></svg>
+      <div class="demo-loading" id="demoLoading">Loading observatory data&hellip;</div>
+      <div class="demo-tooltip" id="demoTooltip"></div>
+      <div class="demo-detail" id="demoDetail">
+        <button class="demo-detail-close" id="demoDetailClose">&times;</button>
+        <div id="demoDetailContent"></div>
+      </div>
+      <div class="demo-legend" id="demoLegend">
+        <div class="demo-legend-item"><div class="demo-legend-swatch" id="legendClean"></div>Clean</div>
+        <div class="demo-legend-item"><div class="demo-legend-swatch" id="legendAmber"></div>Degraded</div>
+        <div class="demo-legend-item"><div class="demo-legend-swatch" id="legendCoral"></div>At risk</div>
+        <div class="demo-legend-item"><div class="demo-legend-swatch" id="legendNoData"></div>No data</div>
+      </div>
     </div>
   </div>
 
